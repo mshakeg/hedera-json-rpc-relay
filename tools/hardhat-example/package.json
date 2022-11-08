@@ -33,6 +33,8 @@
     "get-current-block": "npx hardhat get-current-block",
     "local:deploy": "hardhat --network h_local deploy",
     "testnet:deploy": "hardhat --network h_testnet deploy",
+    "local:tdeploy": "npx hardhat test test/deploy/greeter.ts",
+    "testnet:tdeploy": "npx hardhat --network h_testnet test test/deploy/greeter.ts",
     "test:hr": "npx hardhat test test/rpc.test.ts",
     "test:hgf": "npx hardhat test test/greeter-factory.test.ts",
     "test:hec": "npx hardhat test test/error-contract.test.ts",
