@@ -90,6 +90,7 @@ const config = {
     h_testnet: {
       url: "https://testnet.hashio.io/api",
       accounts: [process.env.DEPLOYER_TESTNET || "", process.env.TESTNET_DEV || ""],
+      timeout: 60_000
     },
   },
   typechain: {
