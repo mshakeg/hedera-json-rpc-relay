@@ -21,6 +21,10 @@ contract Receiver {
       return account.balance;
     }
 
+    // even with payable fallback Donator does not transfer tinybar to Receiver
+    function fallback() external payable {
+    }
+
 }
 
 contract Donator {
