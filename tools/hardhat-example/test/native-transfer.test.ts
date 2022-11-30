@@ -51,6 +51,7 @@ describe("NativeTransfer", function () {
     Receiver = await ethers.getContractFactory("Receiver");
     Donator = await ethers.getContractFactory("Donator");
 
+    // give Donator sufficient tinybar to donate
     donator = (await deployToHedera(Donator, [], {value: getHbarValue(10) })) as Donator;
     receiver = (await deployToHedera(Receiver, [donator.address])) as Receiver;
   });
@@ -58,7 +59,8 @@ describe("NativeTransfer", function () {
   describe("Valid actions", async () => {
     console.log("in valid actions");
 
-    it("Should be able to get tinybar donated to Receiver contract and msg.sender", async () => {
+    // fails
+    it("Should be able to get tinybar donated to Receiver contract", async () => {
 
       const startingReceiverNativeBalance = await receiver.getBalance(receiver.address);
       const startingDonatorNativeBalance = await receiver.getBalance(donator.address);
@@ -90,7 +92,33 @@ describe("NativeTransfer", function () {
         "Donator contract native balance didn't update correctly"
       );
 
-      // do redeemTinybarForSender next
+    });
+
+    // succeeds
+    it("Should be able to get tinybar donated to msg.sender", async () => {
+
+      const startingReceiverNativeBalance = await receiver.getBalance(receiver.address);
+      const startingDonatorNativeBalance = await receiver.getBalance(donator.address);
+
+      const tx = await receiver.redeemTinybarForSender({
+        ...defaultOverrides,
+        from: defaultAccountInfo.address
+      });
+
+      await tx.wait();
+
+      const finalReceiverNativeBalance = await receiver.getBalance(receiver.address);
+      const finalDonatorNativeBalance = await receiver.getBalance(donator.address);
+
+      expect(startingReceiverNativeBalance).to.be.eq(
+        finalReceiverNativeBalance,
+        "Receiver contract native balance changed unexpectedly"
+      );
+
+      expect(startingDonatorNativeBalance.sub(1)).to.be.eq(
+        finalDonatorNativeBalance,
+        "Donator contract native balance didn't update correctly"
+      );
     });
   });
 
