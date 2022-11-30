@@ -71,6 +71,9 @@ const config = {
     },
   },
   networks: {
+    hardhat: {
+      allowUnlimitedContractSize: true,
+    },
     h_local: {
       url: process.env.RELAY_ENDPOINT,
       accounts: [
