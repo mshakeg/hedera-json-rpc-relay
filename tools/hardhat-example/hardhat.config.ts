@@ -24,6 +24,7 @@ import '@nomiclabs/hardhat-waffle';
 import "@typechain/hardhat";
 import "hardhat-network-metadata";
 import "@nomicfoundation/hardhat-chai-matchers";
+import "hardhat-deploy";
 import { task } from "hardhat/config";
 
 task('get-current-block', async () => {
@@ -61,6 +62,14 @@ task('contract-call', async (taskArgs: any) => {
 const config = {
   solidity: '0.8.4',
   defaultNetwork: 'h_local',
+  namedAccounts: {
+    deployer: {
+      default: 0,
+    },
+    dev: {
+      default: 1,
+    },
+  },
   networks: {
     h_local: {
       url: process.env.RELAY_ENDPOINT,
@@ -77,7 +86,12 @@ const config = {
         "0x60fe891f13824a2c1da20fb6a14e28fa353421191069ba6b6d09dd6c29b90eff",
         "0xeae4e00ece872dd14fb6dc7a04f390563c7d69d16326f2a703ec8e0934060cc7",
       ],
-    }
+    },
+    h_testnet: {
+      url: "https://testnet.hashio.io/api",
+      accounts: [process.env.DEPLOYER_TESTNET || "", process.env.TESTNET_DEV || ""],
+      timeout: 60_000
+    },
   },
   typechain: {
     outDir: "types",
