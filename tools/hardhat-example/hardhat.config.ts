@@ -76,6 +76,7 @@ const config = {
     },
     h_local: {
       url: process.env.RELAY_ENDPOINT,
+      timeout: 60_000,
       accounts: [
         // private keys
         "0x105d050185ccb907fba04dd92d8de9e32c18305e097ab41dadda21489a211524",
