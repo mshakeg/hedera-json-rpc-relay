@@ -26,17 +26,39 @@ import {
 
 describe('SillyLargeContract', function() {
 
-  const deployCount = 30;
+  const beforeDeployCount = 1;
+  const testDeployCount = 30;
 
   before(async () => {
 
     // deploy "deployCount" number of SillyLargeContract
 
-    for (let i = 0; i< deployCount; i++) {
+    for (let i = 0; i< beforeDeployCount; i++) {
 
       const SillyLargeContract = await ethers.getContractFactory('SillyLargeContract');
 
       const sillyLargeContract = await SillyLargeContract.deploy(deployOverrides);
+
+      console.log("computed create1 address:", sillyLargeContract.address);
+
+      const deployRc = await sillyLargeContract.deployTransaction.wait();
+      const sillyLargeContractAddress = deployRc.contractAddress;
+
+      console.log('deployed SillyLargeContract:', i, 'to address:', sillyLargeContractAddress);
+
+    }
+
+  });
+
+  it('should be able to deploy many more SillyLargeContract', async function() {
+
+    for (let i = 0; i < testDeployCount; i++) {
+
+      const SillyLargeContract = await ethers.getContractFactory('SillyLargeContract');
+
+      const sillyLargeContract = await SillyLargeContract.deploy(deployOverrides);
+
+      console.log("computed create1 address:", sillyLargeContract.address);
 
       const deployRc = await sillyLargeContract.deployTransaction.wait();
       const sillyLargeContractAddress = deployRc.contractAddress;
@@ -52,6 +74,8 @@ describe('SillyLargeContract', function() {
     const SillyLargeContract = await ethers.getContractFactory('SillyLargeContract');
 
     const sillyLargeContract = await SillyLargeContract.deploy(deployOverrides);
+
+    console.log("computed create1 address:", sillyLargeContract.address);
 
     const deployRc = await sillyLargeContract.deployTransaction.wait();
     const sillyLargeContractAddress = deployRc.contractAddress;

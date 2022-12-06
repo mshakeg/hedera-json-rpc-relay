@@ -100,6 +100,10 @@ const config = {
     outDir: "types",
     target: "ethers-v5",
   },
+  mocha: {
+    timeout: 600_000, // 5mins
+    //bail: true,
+  },
 };
 
 export default config;
