@@ -74,6 +74,10 @@ const config = {
     hardhat: {
       allowUnlimitedContractSize: true,
     },
+    hardhat_local: { // custom hardhat local node; start with: npx hardhat node
+      url: "http://127.0.0.1:8545",
+      allowUnlimitedContractSize: true,
+    },
     h_local: {
       url: process.env.RELAY_ENDPOINT,
       timeout: 60_000,
