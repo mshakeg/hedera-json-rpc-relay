@@ -18,25 +18,89 @@
  *
  */
 
+import { Contract } from 'ethers';
 import {ethers} from 'hardhat';
 
 import {
   deployOverrides
 } from './utils';
 
+// type SuccessPromiseSettledResults = PromiseSettledResult<Contract>[]
+type SuccessContractPromiseSettledResults = {
+  status: string,
+  value: Contract
+}[];
+
+const SettledStatus = {
+  fulfilled: "fulfilled",
+  rejected: "rejected"
+};
+
 describe('SillyLargeContract', function() {
 
-  const deployCount = 30;
+  const beforeDeployCount = 1;
+  const testDeployCount = 30;
+  const parallelDeployCount = 100;
 
   before(async () => {
 
     // deploy "deployCount" number of SillyLargeContract
 
-    for (let i = 0; i< deployCount; i++) {
+    for (let i = 0; i< beforeDeployCount; i++) {
 
       const SillyLargeContract = await ethers.getContractFactory('SillyLargeContract');
 
       const sillyLargeContract = await SillyLargeContract.deploy(deployOverrides);
+
+      console.log("computed create1 address:", sillyLargeContract.address);
+
+      const deployRc = await sillyLargeContract.deployTransaction.wait();
+      const sillyLargeContractAddress = deployRc.contractAddress;
+
+      console.log('deployed SillyLargeContract:', i, 'to address:', sillyLargeContractAddress);
+
+    }
+
+  });
+
+  it('should be able to deploy many SillyLargeContract in parallel', async function() {
+
+    const deployPromises = [];
+
+    for (let i = 0; i < parallelDeployCount; i++) {
+
+      const SillyLargeContract = await ethers.getContractFactory('SillyLargeContract');
+
+      deployPromises.push(SillyLargeContract.deploy(deployOverrides));
+    }
+
+    console.log('waiting for all to settle');
+
+    const responses = (await Promise.allSettled(deployPromises)) as SuccessContractPromiseSettledResults;
+
+    for (const res of responses) {
+      if (res.status = SettledStatus.fulfilled) {
+        console.log("computed create1 address:", res.value.address);
+        const deployRc = await res.value.deployTransaction.wait();
+        const sillyLargeContractAddress = deployRc.contractAddress;
+        console.log('deployed SillyLargeContract to address:', sillyLargeContractAddress);
+      } else {
+        console.log('res:')
+        console.log(res)
+      }
+    }
+
+  });
+
+  it('should be able to deploy many more SillyLargeContract', async function() {
+
+    for (let i = 0; i < testDeployCount; i++) {
+
+      const SillyLargeContract = await ethers.getContractFactory('SillyLargeContract');
+
+      const sillyLargeContract = await SillyLargeContract.deploy(deployOverrides);
+
+      console.log("computed create1 address:", sillyLargeContract.address);
 
       const deployRc = await sillyLargeContract.deployTransaction.wait();
       const sillyLargeContractAddress = deployRc.contractAddress;
@@ -52,6 +116,8 @@ describe('SillyLargeContract', function() {
     const SillyLargeContract = await ethers.getContractFactory('SillyLargeContract');
 
     const sillyLargeContract = await SillyLargeContract.deploy(deployOverrides);
+
+    console.log("computed create1 address:", sillyLargeContract.address);
 
     const deployRc = await sillyLargeContract.deployTransaction.wait();
     const sillyLargeContractAddress = deployRc.contractAddress;
