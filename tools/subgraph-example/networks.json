@@ -1,8 +1,8 @@
 {
   "local": {
     "GreeterFactory": {
-      "address": "0x0000000000000000000000000000000000000408",
-      "startBlock": 31
+      "address": "0x23f5e49569A835d7bf9AefD30e4f60CdD570f225",
+      "startBlock": 54
     }
   },
   "testnet": {
