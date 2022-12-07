@@ -11,18 +11,16 @@ services:
     depends_on:
       - ipfs
       - postgres
-    extra_hosts:
-      - host.docker.internal:host-gateway
     environment:
       postgres_host: postgres
       postgres_user: graph-node
       postgres_pass: let-me-in
       postgres_db: graph-node
       ipfs: 'ipfs:5001'
-      ethereum: 'local:http://host.docker.internal:7546'
+      ethereum: "testnet:https://testnet.hashio.io/api"
       GRAPH_LOG: info
-      GRAPH_ETHEREUM_GENESIS_BLOCK_NUMBER: 1
-      ETHEREUM_POLLING_INTERVAL: 1000
+      GRAPH_ETHEREUM_GENESIS_BLOCK_NUMBER: 27699000
+      ETHEREUM_POLLING_INTERVAL: 2000
   ipfs:
     image: ipfs/go-ipfs:v0.10.0
     ports:
@@ -45,4 +43,3 @@ services:
       PGDATA: "/data/postgres"
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
-

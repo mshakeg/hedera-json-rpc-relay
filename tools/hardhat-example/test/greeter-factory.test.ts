@@ -19,7 +19,7 @@
  */
 
 import {ethers} from 'hardhat';
-import { Greeter, GreeterFactory } from '../types';
+import { Greeter, GreeterFactory, GreeterFactory__factory } from '../types';
 
 import {
   deployOverrides
@@ -34,7 +34,7 @@ describe('GreeterFactory', function() {
 
   before(async () => {
 
-    const GreeterFactory = await ethers.getContractFactory('GreeterFactory');
+    const GreeterFactory = (await ethers.getContractFactory('GreeterFactory')) as GreeterFactory__factory;
 
     greeterFactory = await GreeterFactory.deploy(deployOverrides);
 
@@ -49,10 +49,6 @@ describe('GreeterFactory', function() {
     console.log('GreeterFactory deployed to:', greeterFactoryAddress, '@block:', deployRc.blockNumber);
 
   });
-
-  // it('should be able to create1 Greeter', async function() {
-  //   console.log('dummy test');
-  // });
 
   it('should be able to create1 Greeter', async function() {
     const tx = await greeterFactory.create1Greeter('hello world', deployOverrides);
