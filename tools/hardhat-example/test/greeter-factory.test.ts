@@ -51,7 +51,7 @@ describe('GreeterFactory', function() {
   });
 
   it('should be able to create1 Greeter', async function() {
-    const tx = await greeterFactory.create1Greeter('hello world', deployOverrides);
+    const tx = await greeterFactory.create1Greeter('hello world - create1', deployOverrides);
     const rc = await tx.wait();
 
     console.log('create1 events:', rc.events);
@@ -71,9 +71,9 @@ describe('GreeterFactory', function() {
     greeter1 = await ethers.getContractAt('Greeter', greeterAddress);
   });
 
-  it('should be able to transfer hbars between two accounts', async function() {
+  it('should be able to create1 Greeter', async function() {
 
-    const tx = await greeterFactory.create2Greeter('hello world', deployOverrides);
+    const tx = await greeterFactory.create2Greeter('hello world - create2', deployOverrides);
     const rc = await tx.wait();
 
     console.log('create2 events:', rc.events);
