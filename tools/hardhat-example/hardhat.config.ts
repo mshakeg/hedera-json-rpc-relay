@@ -74,9 +74,14 @@ const config = {
     hardhat: {
       allowUnlimitedContractSize: true,
     },
+    hardhat_local: { // custom hardhat local node; start with: npx hardhat node
+      url: "http://127.0.0.1:8545",
+      allowUnlimitedContractSize: true,
+    },
     h_local: {
       url: process.env.RELAY_ENDPOINT,
       timeout: 60_000,
+      chainId: 298,
       accounts: [
         // private keys
         "0x105d050185ccb907fba04dd92d8de9e32c18305e097ab41dadda21489a211524",
@@ -93,6 +98,7 @@ const config = {
     },
     h_testnet: {
       url: "https://testnet.hashio.io/api",
+      chainId: 296,
       accounts: [process.env.DEPLOYER_TESTNET || "", process.env.TESTNET_DEV || ""],
       timeout: 60_000
     },

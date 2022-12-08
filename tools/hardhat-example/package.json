@@ -38,9 +38,12 @@
     "test:hr": "npx hardhat test test/rpc.test.ts",
     "test:nt": "npx hardhat test test/native-transfer.test.ts",
     "test:hgf": "npx hardhat test test/greeter-factory.test.ts",
+    "test:hgf:hardhat_local": "npx hardhat --network hardhat_local test test/greeter-factory.test.ts",
+    "test:hgf:testnet": "npx hardhat --network h_testnet test test/greeter-factory.test.ts",
     "test:hec": "npx hardhat test test/error-contract.test.ts",
     "test:slc": "npx hardhat test test/silly-large-contract.test.ts",
     "hedera-start": "npx @hashgraph/hedera-local start",
-    "hedera-stop": "npx @hashgraph/hedera-local stop"
+    "hedera-stop": "npx @hashgraph/hedera-local stop",
+    "hardhat-start": "npx hardhat node"
   }
 }

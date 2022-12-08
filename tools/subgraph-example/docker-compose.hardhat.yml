@@ -19,7 +19,7 @@ services:
       postgres_pass: let-me-in
       postgres_db: graph-node
       ipfs: 'ipfs:5001'
-      ethereum: 'local:http://host.docker.internal:7546'
+      ethereum: 'local:http://host.docker.internal:8545'
       GRAPH_LOG: info
       GRAPH_ETHEREUM_GENESIS_BLOCK_NUMBER: 1
       ETHEREUM_POLLING_INTERVAL: 1000

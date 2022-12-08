@@ -1,7 +1,20 @@
 {
+  "local": {
+    "GreeterFactory": {
+      "address": "0x23f5e49569A835d7bf9AefD30e4f60CdD570f225",
+      "startBlock": 45
+    }
+  },
+  "testnet": {
+    "GreeterFactory": {
+      "address": "0x0000000000000000000000000000000002EC75cf",
+      "startBlock": 28062092
+    }
+  },
   "mainnet": {
-    "Greeter": {
-      "address": "0x0000000000000000000000000000000000000408"
+    "GreeterFactory": {
+      "address": "0x0000000000000000000000000000000000000000",
+      "startBlock": 0
     }
   }
 }
