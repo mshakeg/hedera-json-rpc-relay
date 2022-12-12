@@ -97,7 +97,7 @@ const config = {
       ],
     },
     h_testnet: {
-      url: "https://testnet.hashio.io/api",
+      url: process.env.ARKHIA_TESTNET_RELAY_ENDPOINT || "https://testnet.hashio.io/api",
       chainId: 296,
       accounts: [process.env.DEPLOYER_TESTNET || "", process.env.TESTNET_DEV || ""],
       timeout: 60_000
