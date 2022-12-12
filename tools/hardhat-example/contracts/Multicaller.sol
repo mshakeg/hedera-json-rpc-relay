@@ -12,7 +12,8 @@ contract Multicaller is Multicall {
     }
 
     function processLongInput(uint a, uint b, uint c, uint d, uint e, uint f, uint g) pure external returns (uint sum) {
-        sum = a + b + c + d + e + f + g;
+        // commented out to reduce gas cost
+        // sum = a + b + c + d + e + f + g;
     }
 
     struct VeryLongInput {
