@@ -6,6 +6,8 @@ pragma solidity ^0.8.0;
 contract NativeStaker {
 
     bool constant public isNativeStaker = true;
+
+    constructor() payable {}
 }
 
 contract StakeToNativeStaker {
@@ -14,8 +16,10 @@ contract StakeToNativeStaker {
 
     constructor(address _nativeStaker) payable {
 
-        nativeStaker = NativeStaker(_nativeStaker);
-        require(nativeStaker.isNativeStaker() == true, "NOT_NATIVE_STAKER");
+        NativeStaker __nativeStaker = NativeStaker(_nativeStaker);
+        require(__nativeStaker.isNativeStaker() == true, "NOT_NATIVE_STAKER");
+
+        nativeStaker = __nativeStaker;
     }
 
 }

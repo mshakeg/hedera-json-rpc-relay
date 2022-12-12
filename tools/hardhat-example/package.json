@@ -34,6 +34,7 @@
     "get-current-block": "npx hardhat get-current-block",
     "local:deploy": "hardhat --network h_local deploy",
     "testnet:deploy": "hardhat --network h_testnet deploy",
+    "testnet:deploy-ns": "hardhat --network h_testnet deploy --tags NativeStaker",
     "local:tdeploy": "npx hardhat test test/deploy/greeter.ts",
     "testnet:tdeploy": "npx hardhat --network h_testnet test test/deploy/greeter.ts",
     "test:hr": "npx hardhat test test/rpc.test.ts",
