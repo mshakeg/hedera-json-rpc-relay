@@ -6,6 +6,7 @@
   "devDependencies": {
     "@hashgraph/hedera-local": "^2.3.2",
     "@hashgraph/hethers": "^1.1.2",
+    "@hashgraph/sdk": "^2.19.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.4",
     "@nomicfoundation/hardhat-toolbox": "^2.0.0",
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",
@@ -33,6 +34,7 @@
     "get-current-block": "npx hardhat get-current-block",
     "local:deploy": "hardhat --network h_local deploy",
     "testnet:deploy": "hardhat --network h_testnet deploy",
+    "testnet:deploy-ns": "hardhat --network h_testnet deploy --tags NativeStaker",
     "local:tdeploy": "npx hardhat test test/deploy/greeter.ts",
     "testnet:tdeploy": "npx hardhat --network h_testnet test test/deploy/greeter.ts",
     "test:hr": "npx hardhat test test/rpc.test.ts",
