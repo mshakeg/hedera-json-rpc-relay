@@ -82,6 +82,7 @@ async function getStakingInfoFcn(id: string | ContractId | null | undefined) {
 }
 
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+  return;
   console.log("Deploy NativeStaker & StakeToNativeStaker");
 
   const nativeStakerBytecode = (await hre.ethers.getContractFactory("NativeStaker")).bytecode;
