@@ -149,6 +149,19 @@ describe('Multicaller', function() {
 
   });
 
+  it('should be able to make 2_936 or more multicall processLongInput calls', async function() {
+
+    await multicallProcessLongInput(2_936);
+
+  });
+
+  // fails on hardhat local node on 2_937+
+  it('should be able to make 2_937 or more multicall processLongInput calls', async function() {
+
+    await multicallProcessLongInput(2_937);
+
+  });
+
   // it('should be able to multicall processVeryLongInput', async function() {
 
   //   const iterations = 1600;
