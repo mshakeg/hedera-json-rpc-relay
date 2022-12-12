@@ -6,6 +6,7 @@
   "devDependencies": {
     "@hashgraph/hedera-local": "^2.3.2",
     "@hashgraph/hethers": "^1.1.2",
+    "@hashgraph/sdk": "^2.19.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.4",
     "@nomicfoundation/hardhat-toolbox": "^2.0.0",
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",
