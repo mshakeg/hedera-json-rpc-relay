@@ -47,7 +47,7 @@
     "test:hgf:testnet": "npx hardhat --network h_testnet test test/greeter-factory.test.ts",
     "test:hec": "npx hardhat test test/error-contract.test.ts",
     "test:slc": "npx hardhat test test/silly-large-contract.test.ts",
-    "hedera-start": "npx @hashgraph/hedera-local start",
+    "hedera-start": "npx @hashgraph/hedera-local start --limits=false --dev=true",
     "hedera-stop": "npx @hashgraph/hedera-local stop",
     "hardhat-start": "npx hardhat node"
   }
