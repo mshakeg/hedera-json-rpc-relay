@@ -619,10 +619,10 @@
     tweetnacl "^1.0.3"
     utf8 "^3.0.0"
 
-"@hashgraph/hedera-local@^2.4.0":
-  version "2.4.0"
-  resolved "https://registry.yarnpkg.com/@hashgraph/hedera-local/-/hedera-local-2.4.0.tgz#2989f2f919ea9a06d7233a8a61459a7a43af37a7"
-  integrity sha512-l9+K2fCy9tI3eKxOock9OwRRNR4E5lef4dx9KgrtRRPKE7uPPh7oP6iG+x+EObLkgwkDJf1wmZ8VRlaqkx9hdA==
+"@hashgraph/hedera-local@^2.4.1":
+  version "2.4.1"
+  resolved "https://registry.yarnpkg.com/@hashgraph/hedera-local/-/hedera-local-2.4.1.tgz#4a81ae9737f7425806406ca66a7b58b732d4f40e"
+  integrity sha512-wgajOITLGumCvMEugBzYvk+IwsLZm1hziB0UPlChLvNNrRA7mQkywtP4h59ZGqBN4Ze2jZNDIRpCudcRSK5TAQ==
   dependencies:
     "@hashgraph/hethers" "^1.2.2"
     "@hashgraph/sdk" "^2.19.0"
