@@ -42,6 +42,8 @@ contract Caller {
             (success, data) = _addr.call{gas: 20_000}(
                 abi.encodeWithSignature('viewCall(string,uint256)', 'call foo', 123)
             );
+        } else {
+            success = true;
         }
 
     }
