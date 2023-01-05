@@ -93,4 +93,20 @@ describe('LowLevelCall', function() {
 
   });
 
+  it('should confirm valid contract', async function() {
+
+    const result = await caller.isContract(lowLevelReceiver.address);
+
+    console.log(result);
+
+  });
+
+  it('should confirm invalid contract', async function() {
+
+    const result = await caller.isContract(invalidLowLevelReceiverAddress);
+
+    console.log(result);
+
+  });
+
 });

@@ -27,18 +27,23 @@ contract Caller {
 
     function testCallFoo(address payable _addr) public payable {
         // You can send ether and specify a custom gas amount
-        (bool success, bytes memory data) = _addr.call{value: msg.value, gas: 20_000}(
-            abi.encodeWithSignature('foo(string,uint256)', 'call foo', 123)
-        );
 
-        emit Response(success, data);
+        if (isContract(_addr)) {
+            (bool success, bytes memory data) = _addr.call{value: msg.value, gas: 20_000}(
+                abi.encodeWithSignature('foo(string,uint256)', 'call foo', 123)
+            );
+            emit Response(success, data);
+        }
     }
 
     function testCallViewCall(address payable _addr) public returns (bool success, bytes memory data) {
         // You can send ether and specify a custom gas amount
-        (success, data) = _addr.call{gas: 20_000}(
-            abi.encodeWithSignature('viewCall(string,uint256)', 'call foo', 123)
-        );
+        if (isContract(_addr)) {
+            (success, data) = _addr.call{gas: 20_000}(
+                abi.encodeWithSignature('viewCall(string,uint256)', 'call foo', 123)
+            );
+        }
+
     }
 
     // // Calling a function that does not exist triggers the fallback function.
@@ -47,4 +52,15 @@ contract Caller {
 
     //     emit Response(success, data);
     // }
+
+    // https://stackoverflow.com/a/73335577/10261711
+    // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/a28aafdc85a592776544f7978c6b1a462d28ede2/contracts/utils/Address.sol#L40
+    function isContract(address account) public view returns (bool) {
+        // This method relies on extcodesize/address.code.length, which returns 0
+        // for contracts in construction, since the code is only stored at the end
+        // of the constructor execution.
+
+        return account.code.length > 0;
+    }
+
 }
