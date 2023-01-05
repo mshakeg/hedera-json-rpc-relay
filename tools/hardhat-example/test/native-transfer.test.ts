@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { Contract, ContractFactory, BigNumber, Signer } from "ethers";
+import { Signer } from "ethers";
 import { ethers } from "hardhat";
 
 import {
@@ -8,27 +8,7 @@ import {
   Donator,
   Donator__factory,
 } from "../types";
-import { defaultOverrides, getHbarValue, FunctionArgs } from "./utils";
-
-async function getHederaDeployAddress(contract: Contract): Promise<string> {
-  return (await contract.deployTransaction.wait()).contractAddress;
-}
-
-async function deployToHedera(
-  Contract: ContractFactory,
-  args: FunctionArgs = [],
-  overrides: {
-    from?: Signer;
-    gasLimit?: number;
-    value?: BigNumber;
-  } = {
-    gasLimit: 1_000_000,
-  }
-): Promise<Contract> {
-  const contract = await Contract.deploy(...args, overrides);
-  const contractAddress = await getHederaDeployAddress(contract); // hedera contract address corresponds with the account id not the create1 address on typical evm chains
-  return Contract.attach(contractAddress);
-}
+import { defaultOverrides, getHbarValue, deployToHedera } from "./utils";
 
 describe("NativeTransfer", function () {
   let Receiver: Receiver__factory;
