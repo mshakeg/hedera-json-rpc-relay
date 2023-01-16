@@ -4,7 +4,7 @@
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@^0.3.0-beta.13"
   },
   "devDependencies": {
-    "@hashgraph/hedera-local": "^2.4.1",
+    "@hashgraph/hedera-local": "^2.4.2",
     "@hashgraph/hethers": "^1.1.2",
     "@hashgraph/sdk": "^2.19.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.4",
@@ -41,7 +41,7 @@
     "test:pc": "npx hardhat --network h_local test test/deploy-problem-contract.test.ts",
     "test:pc:testnet": "npx hardhat --network h_testnet test test/deploy-problem-contract.test.ts",
     "test:nt": "npx hardhat test test/native-transfer.test.ts",
-    "test:hgf": "npx hardhat test test/greeter-factory.test.ts",
+    "test:hgf:local": "npx hardhat --network h_local test test/greeter-factory.test.ts",
     "test:multicaller": "npx hardhat test test/multicaller.test.ts",
     "test:multicaller:local": "npx hardhat --network h_local test test/multicaller.test.ts",
     "test:multicaller:testnet": "npx hardhat --network h_testnet test test/multicaller.test.ts",

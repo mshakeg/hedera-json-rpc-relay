@@ -71,7 +71,7 @@ describe('GreeterFactory', function() {
     greeter1 = await ethers.getContractAt('Greeter', greeterAddress);
   });
 
-  it('should be able to create1 Greeter', async function() {
+  it('should be able to create2 Greeter', async function() {
 
     const tx = await greeterFactory.create2Greeter('hello world - create2', deployOverrides);
     const rc = await tx.wait();
