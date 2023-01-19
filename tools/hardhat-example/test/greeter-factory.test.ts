@@ -32,6 +32,8 @@ describe('GreeterFactory', function() {
   let greeter1: Greeter;
   let greeter2: Greeter;
 
+  let create1GreeterBlockNumber: number;
+
   before(async () => {
 
     const GreeterFactory = (await ethers.getContractFactory('GreeterFactory')) as GreeterFactory__factory;
@@ -54,7 +56,10 @@ describe('GreeterFactory', function() {
     const tx = await greeterFactory.create1Greeter('hello world - create1', deployOverrides);
     const rc = await tx.wait();
 
+    create1GreeterBlockNumber = rc.blockNumber;
+
     console.log('create1 events:', rc.events);
+    console.log('create1 Greeter deployed @block:', create1GreeterBlockNumber);
 
     if (!rc.events || !rc.events[0]) {
       throw new Error('No CreatedGreeter1 event');
@@ -71,12 +76,13 @@ describe('GreeterFactory', function() {
     greeter1 = await ethers.getContractAt('Greeter', greeterAddress);
   });
 
-  it('should be able to create1 Greeter', async function() {
+  it('should be able to create2 Greeter', async function() {
 
     const tx = await greeterFactory.create2Greeter('hello world - create2', deployOverrides);
     const rc = await tx.wait();
 
     console.log('create2 events:', rc.events);
+    console.log('create2 Greeter deployed @block:', rc.blockNumber);
 
     if (!rc.events || !rc.events[0]) {
       throw new Error('No CreatedGreeter2 event');
@@ -109,6 +115,23 @@ describe('GreeterFactory', function() {
     const rc = await tx.wait();
 
     console.log("greeter2 events", rc.events);
+  });
+
+  it('should be able to call greet on greeter1', async function() {
+    const greeting1 = await greeter1.greet();
+
+    console.log("greeter1:", greeting1);
+  });
+
+  it('should be able to call greet on greeter1 at a specific block number', async function() {
+
+    console.log('get create1 greet @block:', create1GreeterBlockNumber);
+
+    const greeting1 = await greeter1.greet({
+      blockTag: create1GreeterBlockNumber
+    });
+
+    console.log("greeter1:", greeting1);
   });
 
 });
