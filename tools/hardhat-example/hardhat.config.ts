@@ -98,6 +98,12 @@ const config = {
         "0xeae4e00ece872dd14fb6dc7a04f390563c7d69d16326f2a703ec8e0934060cc7",
       ],
     },
+    h_previewnet: {
+      url: "https://previewnet.hashio.io/api",
+      chainId: 297,
+      accounts: [process.env.DEPLOYER_PREVIEWNET || ""],
+      timeout: 60_000
+    },
     h_testnet: {
       url: process.env.ARKHIA_TESTNET_RELAY_ENDPOINT || "https://testnet.hashio.io/api",
       chainId: 296,
