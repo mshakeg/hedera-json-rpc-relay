@@ -18,7 +18,8 @@ describe("SimpleCounter", function () {
     const counter = (await ethers.getContractAt("SimpleCounter", counterAddress)) as SimpleCounter;
 
     const signers = await ethers.getSigners();
-    const deployer = signers[0].address;
+    const signer = signers[0];
+    const deployer = signer.address;
     console.log("Deployer:", deployer);
 
     // const SimpleCounter = await ethers.getContractFactory("SimpleCounter");
@@ -34,18 +35,22 @@ describe("SimpleCounter", function () {
 
     let i = 0;
 
-    const startTime = Date.now();
-
     const initialCount = await counter.getCount();
+
+    let nonce = await signer.getTransactionCount();
+
+    const startTime = Date.now();
 
     while (i < txLimit) {
       // assume a gasLimit/block of 9m and a block time of 2s, that gives a 4.5m/s limit or 100 txs/second
       // hedera has a gasLimit of 15m/block, which for the most part is used on testnet so 9m is a fair assumption
       // note due to additional rate limits on the relay level, instead of 100 tx/s, only 50 tx/s is used as shown below
       txs.push(counter.increment({
-        gasLimit: 45_000
+        gasLimit: 45_000,
+        nonce
       }));
       i++;
+      nonce++;
 
       // every 50 txs sleep for 1s before proceeding
       if (i%50 === 0) {
@@ -66,6 +71,7 @@ describe("SimpleCounter", function () {
     }
 
     console.log('end @block:', blockNumber);
+    await sleep(4_000);
 
     const finalCount = await counter.getCount();
 
