@@ -6,7 +6,8 @@ import {
 } from "../types";
 
 import {
-  sleep
+  sleep,
+  PromiseStatus
 } from './utils';
 
 describe("SimpleCounter", function () {
@@ -64,10 +65,18 @@ describe("SimpleCounter", function () {
 
     console.log('ms to create all:', timeToCreateAll);
 
-    const finalTxs = await Promise.all(txs);
+    const finalTxs = await Promise.allSettled(txs);
 
     for (const txIndex in finalTxs) {
-      console.log(`tx ${txIndex}:`, finalTxs[txIndex].hash);
+
+      const settledTx = finalTxs[txIndex];
+
+      if (settledTx.status === PromiseStatus.FULFILLED) {
+        const tx = settledTx.value;
+        console.log(`tx ${txIndex} success:`, tx.hash);
+      } else {
+        console.log(`tx ${txIndex} failed:`, settledTx.reason);
+      }
     }
 
     console.log('end @block:', blockNumber);
