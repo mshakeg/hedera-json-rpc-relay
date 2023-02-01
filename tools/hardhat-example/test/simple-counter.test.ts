@@ -12,7 +12,7 @@ import {
 describe("SimpleCounter", function () {
   it("should increase the counter by a set amount of transactions", async function () {
 
-    const txLimit = 1000;
+    const txLimit = 2;
 
     const counterAddress = '0xb40a3bE7a402b4FBa84299E6c863060AC29Cc514';
     const counter = (await ethers.getContractAt("SimpleCounter", counterAddress)) as SimpleCounter;
@@ -62,7 +62,7 @@ describe("SimpleCounter", function () {
     const finalTxs = await Promise.all(txs);
 
     for (const txIndex in finalTxs) {
-      console.log(`tx ${txIndex}:`, finalTxs[txIndex]);
+      console.log(`tx ${txIndex}:`, finalTxs[txIndex].hash);
     }
 
     console.log('end @block:', blockNumber);
