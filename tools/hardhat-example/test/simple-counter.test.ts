@@ -13,7 +13,7 @@ import {
 describe("SimpleCounter", function () {
   it("should increase the counter by a set amount of transactions", async function () {
 
-    const txLimit = 2;
+    const txLimit = 1000;
 
     const counterAddress = '0xb40a3bE7a402b4FBa84299E6c863060AC29Cc514';
     const counter = (await ethers.getContractAt("SimpleCounter", counterAddress)) as SimpleCounter;
@@ -52,6 +52,9 @@ describe("SimpleCounter", function () {
       }));
       i++;
       nonce++;
+
+      // space requests apart by 5ms to avoid potential ordering issues; this may not be required
+      await sleep(5);
 
       // every 50 txs sleep for 1s before proceeding
       if (i%50 === 0) {
