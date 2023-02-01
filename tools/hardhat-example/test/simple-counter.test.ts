@@ -36,6 +36,8 @@ describe("SimpleCounter", function () {
 
     const startTime = Date.now();
 
+    const initialCount = await counter.getCount();
+
     while (i < txLimit) {
       // assume a gasLimit/block of 9m and a block time of 2s, that gives a 4.5m/s limit or 100 txs/second
       // hedera has a gasLimit of 15m/block, which for the most part is used on testnet so 9m is a fair assumption
@@ -65,7 +67,9 @@ describe("SimpleCounter", function () {
 
     console.log('end @block:', blockNumber);
 
-    expect(await counter.getCount()).to.equal(txs.length);
+    const finalCount = await counter.getCount();
+
+    expect(finalCount.sub(initialCount)).to.equal(txs.length);
 
   });
 });
