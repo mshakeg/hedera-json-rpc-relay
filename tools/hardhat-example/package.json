@@ -49,6 +49,8 @@
     "test:hgf:previewnet": "npx hardhat --network h_previewnet test test/greeter-factory.test.ts",
     "test:hgf:testnet": "npx hardhat --network h_testnet test test/greeter-factory.test.ts",
     "test:sc:testnet": "npx hardhat --network h_testnet test test/simple-counter.test.ts",
+    "test:th:testnet": "npx hardhat --network h_testnet test test/transfer-hbar.test.ts",
+    "test:th:previewnet": "npx hardhat --network h_previewnet test test/transfer-hbar.test.ts",
     "test:hec": "npx hardhat test test/error-contract.test.ts",
     "test:slc": "npx hardhat test test/silly-large-contract.test.ts",
     "test:llc": "npx hardhat test test/low-level-call.test.ts",
