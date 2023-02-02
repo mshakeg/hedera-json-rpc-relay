@@ -75,7 +75,7 @@ describe('Transfer HBAR', function() {
 
   });
 
-  it('CAN transfer(but should) to existing account at 100x gas price', async function() {
+  it('CAN transfer to existing account at 100x gas price', async function() {
 
     const existingAccount = "0xA16e3686D5E12803B6e30c783Be10876dCEB8fc9";
     const signer = await ethers.provider.getSigner();
