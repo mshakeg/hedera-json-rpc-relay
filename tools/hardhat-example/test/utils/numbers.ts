@@ -10,6 +10,6 @@ export function getHbarValue(hbars: number): BigNumber {
 }
 
 export async function getGasPrice(): Promise<BigNumber> {
-  const defaultProvider = ethers.getDefaultProvider();
-  return defaultProvider.getGasPrice();
+  const networkProvider = ethers.provider;
+  return networkProvider.getGasPrice();
 }
