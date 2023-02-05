@@ -40,7 +40,7 @@ describe('SillyLargeContract', function() {
 
   const beforeDeployCount = 1;
   const testDeployCount = 10;
-  const parallelDeployCount = 1;
+  const parallelDeployCount = 2;
 
   before(async () => {
 
