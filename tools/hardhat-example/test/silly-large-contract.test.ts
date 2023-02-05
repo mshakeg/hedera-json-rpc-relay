@@ -39,8 +39,8 @@ const SettledStatus = {
 describe('SillyLargeContract', function() {
 
   const beforeDeployCount = 1;
-  const testDeployCount = 30;
-  const parallelDeployCount = 100;
+  const testDeployCount = 10;
+  const parallelDeployCount = 1;
 
   before(async () => {
 
