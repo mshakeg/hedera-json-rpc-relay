@@ -7,7 +7,7 @@ import {
 
 describe('Get blocks in parallel', function () {
   const startBlock = 522_900;
-  const endBlock = 523_100;
+  const endBlock = 523_900;
   const testCases = [10, 100, 1_000]; // block ranges
 
   async function getParallelBlocks(startBlock: number, endBlock: number, blockRange: number) {
