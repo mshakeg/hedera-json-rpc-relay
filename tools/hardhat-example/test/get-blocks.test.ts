@@ -6,7 +6,7 @@ import {
 } from './utils'
 
 describe('Get blocks in parallel', function () {
-  const startBlock = 522_928;
+  const startBlock = 522_900;
   const endBlock = 523_100;
   const testCases = [10, 100, 1_000]; // block ranges
 
@@ -16,6 +16,9 @@ describe('Get blocks in parallel', function () {
 
       const promises = [];
       const upper = Math.min(i + blockRange, endBlock);
+
+      console.log(`getting block range: [${i}, ${upper}]`);
+
       for (let j = i; j < upper; j++) {
         promises.push(
           ethers.provider.getBlock(j)
