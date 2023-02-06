@@ -4,6 +4,8 @@
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@^0.3.0-beta.13"
   },
   "devDependencies": {
+    "@ethersproject/logger": "^5.7.0",
+    "@ethersproject/providers": "^5.7.2",
     "@hashgraph/hedera-local": "^2.4.2",
     "@hashgraph/hethers": "^1.1.2",
     "@hashgraph/sdk": "^2.19.0",
@@ -55,6 +57,7 @@
     "test:slc": "npx hardhat test test/silly-large-contract.test.ts",
     "test:slc:testnet": "npx hardhat --network h_testnet test test/silly-large-contract.test.ts",
     "test:smc:testnet": "npx hardhat --network h_testnet test test/silly-medium-contract.test.ts",
+    "test:gb:testnet": "npx hardhat --network h_testnet test test/get-blocks.test.ts",
     "test:llc": "npx hardhat test test/low-level-call.test.ts",
     "test:llc:local": "npx hardhat --network h_local test test/low-level-call.test.ts",
     "hedera-start": "npx @hashgraph/hedera-local start --limits=false --dev=true",
