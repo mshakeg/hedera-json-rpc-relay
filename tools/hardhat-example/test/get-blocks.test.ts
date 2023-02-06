@@ -11,33 +11,36 @@ describe('Get blocks in parallel', function () {
   const testCases = [10, 100, 1_000]; // block ranges
 
   async function getParallelBlocks(startBlock: number, endBlock: number, blockRange: number) {
-    const promises = [];
 
     for (let i = startBlock; i < endBlock; i += blockRange) {
+
+      const promises = [];
       const upper = Math.min(i + blockRange, endBlock);
       for (let j = i; j < upper; j++) {
         promises.push(
           ethers.provider.getBlock(j)
         );
       }
-    }
 
-    const results = await Promise.allSettled(promises);
+      // wait for all promises to settle before proceeding onto getting next block range
+      const results = await Promise.allSettled(promises);
 
-    for (const blockResult of results) {
+      for (const blockResult of results) {
 
-      if (blockResult.status === PromiseStatus.FULFILLED) {
+        if (blockResult.status === PromiseStatus.FULFILLED) {
 
-        const value = blockResult.value as Block;
-        const blockNumber = value.number;
+          const value = blockResult.value as Block;
+          const blockNumber = value.number;
 
-        console.log('Block success:', blockNumber);
+          console.log('Block success:', blockNumber);
 
-      } else {
+        } else {
 
-        const error = blockResult.reason;
-        console.log('Block failed message:', error.message);
+          const error = blockResult.reason;
+          console.log('Block failed message:', error.message);
+        }
       }
+
     }
   }
 
