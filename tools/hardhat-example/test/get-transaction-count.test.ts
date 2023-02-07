@@ -1,3 +1,4 @@
+import { BigNumber } from 'ethers';
 import { ethers } from 'hardhat';
 
 import {
@@ -16,7 +17,7 @@ describe('Get block transactions in parallel', function () {
 
     for (let i = startBlock; i < endBlock; i += blockRange) {
 
-      const promises: Array<Promise<number>> = [];
+      const promises: Array<Promise<string>> = [];
       const upper = Math.min(i + blockRange, endBlock);
 
       console.log(`getting block txs count range: [${i}, ${upper}]`);
@@ -37,9 +38,9 @@ describe('Get block transactions in parallel', function () {
 
         if (blockResult.status === PromiseStatus.FULFILLED) {
 
-          const blockTxCount = blockResult.value;
+          const blockTxCount = BigNumber.from(blockResult.value);
 
-          console.log('Block success:', blockTxCount);
+          console.log('Block success:', blockTxCount.toNumber());
 
         } else {
 
