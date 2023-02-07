@@ -1,6 +1,8 @@
 import { ethers } from 'hardhat';
+
 import {
-  PromiseStatus
+  PromiseStatus,
+  removeLeadingZeros
 } from './utils'
 
 describe('Get block transactions in parallel', function () {
@@ -21,10 +23,10 @@ describe('Get block transactions in parallel', function () {
 
       for (let j = i; j < upper; j++) {
 
-        blockNumber = ethers.BigNumber.from(j);
+        blockNumber = removeLeadingZeros(j);
 
         promises.push(
-          ethers.provider.send('eth_getBlockTransactionCountByNumber', [blockNumber._hex, false])
+          ethers.provider.send('eth_getBlockTransactionCountByNumber', [blockNumber, false])
         );
       }
 
