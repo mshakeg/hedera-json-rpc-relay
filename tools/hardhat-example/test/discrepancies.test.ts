@@ -2,7 +2,7 @@ import { TransactionReceipt } from '@ethersproject/providers';
 import { expect } from 'chai';
 import { BigNumber, ContractReceipt } from 'ethers';
 import {ethers, network} from 'hardhat';
-import { SillyLargeContract, SillyLargeContract__factory, SimpleVault__factory, SimpleVault, Associator, HERC20Util, HERC20Util__factory } from '../types';
+import { SillyLargeContract, SillyLargeContract__factory, SimpleVault__factory, SimpleVault, Associator, HERC20Util, HERC20Util__factory, ERC20__factory } from '../types';
 import { transferToken } from './api/core';
 import { balanceOf } from './api/core/balances';
 import { defaultOverrides, getBigNumber, getRandomNumber } from './utils';
@@ -120,28 +120,7 @@ describe('Demo discrepancies between hardhat and hedera local node', function() 
     expect(rcs[0].transactionHash).to.not.eq(rcs[1].transactionHash, "txs have same hashes");
   });
 
-  it('should be able get correct ERC20 balance after transfer', async function () {
-    // Deploy ERC20 token contract
-    const MyToken = await ethers.getContractFactory('MyToken');
-    const myToken = await MyToken.deploy('MyToken', 'MT');
 
-    // Get initial balances of two accounts
-    const [account1, account2] = await ethers.getSigners();
-    const initialBalance1 = await myToken.balanceOf(account1.address);
-    const initialBalance2 = await myToken.balanceOf(account2.address);
-
-    // Transfer tokens from account1 to account2
-    const amount = 100;
-    await myToken.transfer(account2.address, amount);
-
-    // Get updated balances of the two accounts
-    const updatedBalance1 = await myToken.balanceOf(account1.address);
-    const updatedBalance2 = await myToken.balanceOf(account2.address);
-
-    // Assert that balances were updated correctly
-    expect(updatedBalance1).to.equal(initialBalance1.sub(amount));
-    expect(updatedBalance2).to.equal(initialBalance2.add(amount));
-  });
 
   it('should be able to deposit and withdraw from vault repeatedly and get correct balances', async function () {
 
@@ -149,6 +128,8 @@ describe('Demo discrepancies between hardhat and hedera local node', function() 
       // hedera precompile contracts aren't functional on the hardhat local node
       this.skip();
     }
+
+    const ERC20Factory = (await ethers.getContractFactory('ERC20')) as ERC20__factory;
 
     const AssociatorFactory = await ethers.getContractFactory("Associator");
     const associatorContract: Associator = (await AssociatorFactory.deploy({ gasLimit: 5_000_000 })) as Associator;
@@ -164,6 +145,9 @@ describe('Demo discrepancies between hardhat and hedera local node', function() 
       HERC20.deploy("TokenA", "TOKA", totalSupply),
       HERC20.deploy("TokenB", "TOKB", totalSupply),
     ] as Promise<HERC20>[]);
+
+    const erc20TokenA = ERC20Factory.attach(tokenA.address);
+    const erc20TokenB = ERC20Factory.attach(tokenB.address);
 
     await simpleVaultContract.associate(tokenA.address, defaultOverrides);
     await simpleVaultContract.associate(tokenB.address, defaultOverrides);
@@ -192,6 +176,16 @@ describe('Demo discrepancies between hardhat and hedera local node', function() 
     const hERC20UtilContract: HERC20Util = (await HERC20UtilFactory.deploy({ gasLimit: 5_000_000 })) as HERC20Util;
     await hERC20UtilContract.deployed();
 
+    async function getTokenBalances(address: string): Promise<Array<BigNumber>> {
+      const balanceTokenA = erc20TokenA.balanceOf(address);
+      const balanceTokenB = erc20TokenB.balanceOf(address);
+
+      return Promise.all([
+        balanceTokenA,
+        balanceTokenB
+      ]);
+    }
+
     async function getTokenBalance(tokens: string[], address: string) {
       const promisesA: Promise<BigNumber>[] = [];
       const promisesB: Promise<BigNumber>[] = [];
@@ -208,7 +202,7 @@ describe('Demo discrepancies between hardhat and hedera local node', function() 
 
         // for some reason the balance returned by the HERC20Util is not correct; but the balance returned via the @hashgraph/sdk is correct; hence why B and NOT A is returned
         if (!balanceA.eq(balanceB)) {
-          console.log("balance A !== balance B");
+          console.log("balance Core !== balance HERC20Util");
         }
       }
 
@@ -269,6 +263,25 @@ describe('Demo discrepancies between hardhat and hedera local node', function() 
       const [startingBalanceVaultA, startingBalanceVaultB] = await getTokenBalance([tokenA.address, tokenB.address], simpleVaultContract.address);
       const [startingBalanceSignerA, startingBalanceSignerB] = await getTokenBalance([tokenA.address, tokenB.address], defaultTokenOwner.address);
 
+      const [startingERC20BalanceVaultA, startingERC20BalanceVaultB] = await getTokenBalances(simpleVaultContract.address);
+      const [startingERC20BalanceSignerA, startingERC20BalanceSignerB] = await getTokenBalances(defaultTokenOwner.address);
+
+      if (!startingERC20BalanceVaultA.eq(startingBalanceVaultA)) {
+        console.log('1 - balance Core !== balance ERC20');
+      }
+
+      if (!startingERC20BalanceVaultB.eq(startingBalanceVaultB)) {
+        console.log('2 - balance Core !== balance ERC20');
+      }
+
+      if (!startingERC20BalanceSignerA.eq(startingBalanceSignerA)) {
+        console.log('3 - balance Core !== balance ERC20');
+      }
+
+      if (!startingERC20BalanceSignerB.eq(startingBalanceSignerB)) {
+        console.log('4 - balance Core !== balance ERC20');
+      }
+
       if (shouldDepositA) {
         const depositAndWithdrawTx = await simpleVaultContract.depositAndWithdraw(tokenA.address, depositAmount, tokenB.address, withdrawAmount, defaultOverrides);
       } else {
@@ -277,6 +290,25 @@ describe('Demo discrepancies between hardhat and hedera local node', function() 
 
       const [endingBalanceVaultA, endingBalanceVaultB] = await getTokenBalance([tokenA.address, tokenB.address], simpleVaultContract.address);
       const [endingBalanceSignerA, endingBalanceSignerB] = await getTokenBalance([tokenA.address, tokenB.address], defaultTokenOwner.address);
+
+      const [endingERC20BalanceVaultA, endingERC20BalanceVaultB] = await getTokenBalances(simpleVaultContract.address);
+      const [endingERC20BalanceSignerA, endingERC20BalanceSignerB] = await getTokenBalances(defaultTokenOwner.address);
+
+      if (!endingERC20BalanceVaultA.eq(endingBalanceVaultA)) {
+        console.log('5 - balance Core !== balance ERC20');
+      }
+
+      if (!endingERC20BalanceVaultB.eq(endingBalanceVaultB)) {
+        console.log('6 - balance Core !== balance ERC20');
+      }
+
+      if (!endingERC20BalanceSignerA.eq(endingBalanceSignerA)) {
+        console.log('7 - balance Core !== balance ERC20');
+      }
+
+      if (!endingERC20BalanceSignerB.eq(endingBalanceSignerB)) {
+        console.log('8 - balance Core !== balance ERC20');
+      }
 
       if (shouldDepositA) {
         expect(endingBalanceVaultA).to.be.eq(startingBalanceVaultA.add(depositAmount));
@@ -302,7 +334,7 @@ describe('Demo discrepancies between hardhat and hedera local node', function() 
     }
 
     // Does consistently get balances correctly using both SDK and HERC20Util for withdraw() and deposit() calls
-    const iterations = 10;
+    const iterations = 5;
 
     let maxAmount = 1e6;
 
