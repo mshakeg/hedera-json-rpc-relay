@@ -25,6 +25,7 @@ import "@typechain/hardhat";
 import "hardhat-network-metadata";
 import "@nomicfoundation/hardhat-chai-matchers";
 import "hardhat-deploy";
+import "hardhat-network-metadata";
 import { task } from "hardhat/config";
 
 task('get-current-block', async () => {
@@ -83,6 +84,9 @@ const config = {
     },
     h_local: {
       url: process.env.RELAY_ENDPOINT,
+      metadata: {
+        mirrorPath: "http://localhost:5551/api/v1",
+      },
       timeout: 60_000,
       chainId: 298,
       accounts: [
