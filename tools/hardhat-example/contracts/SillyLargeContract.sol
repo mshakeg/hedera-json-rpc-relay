@@ -55,11 +55,10 @@ contract SillyLargeContract {
     event GreetingSet25(address greeter, string greeting);
 
     function setManyGreetings(string memory commonGreeting) public {
-        setGreeting1(commonGreeting);
-        setGreeting2(commonGreeting);
-        setGreeting3(commonGreeting);
-        setGreeting4(commonGreeting);
-        setGreeting5(commonGreeting);
+
+        for (uint i = 0; i < 50; i++) {
+            setGreeting1(commonGreeting);
+        }
     }
 
     function setGreeting1(string memory _greeting) public {
@@ -89,31 +88,31 @@ contract SillyLargeContract {
         greeting24 = _greeting;
         greeting25 = _greeting;
 
-        emit GreetingSet1(address(this), _greeting);
-        emit GreetingSet2(address(this), _greeting);
-        emit GreetingSet3(address(this), _greeting);
-        emit GreetingSet4(address(this), _greeting);
-        emit GreetingSet5(address(this), _greeting);
-        emit GreetingSet6(address(this), _greeting);
-        emit GreetingSet7(address(this), _greeting);
-        emit GreetingSet8(address(this), _greeting);
-        emit GreetingSet9(address(this), _greeting);
-        emit GreetingSet10(address(this), _greeting);
-        emit GreetingSet11(address(this), _greeting);
-        emit GreetingSet12(address(this), _greeting);
-        emit GreetingSet13(address(this), _greeting);
-        emit GreetingSet14(address(this), _greeting);
-        emit GreetingSet15(address(this), _greeting);
-        emit GreetingSet16(address(this), _greeting);
-        emit GreetingSet17(address(this), _greeting);
-        emit GreetingSet18(address(this), _greeting);
-        emit GreetingSet19(address(this), _greeting);
-        emit GreetingSet20(address(this), _greeting);
-        emit GreetingSet21(address(this), _greeting);
-        emit GreetingSet22(address(this), _greeting);
-        emit GreetingSet23(address(this), _greeting);
-        emit GreetingSet24(address(this), _greeting);
-        emit GreetingSet25(address(this), _greeting);
+        // emit GreetingSet1(address(this), _greeting);
+        // emit GreetingSet2(address(this), _greeting);
+        // emit GreetingSet3(address(this), _greeting);
+        // emit GreetingSet4(address(this), _greeting);
+        // emit GreetingSet5(address(this), _greeting);
+        // emit GreetingSet6(address(this), _greeting);
+        // emit GreetingSet7(address(this), _greeting);
+        // emit GreetingSet8(address(this), _greeting);
+        // emit GreetingSet9(address(this), _greeting);
+        // emit GreetingSet10(address(this), _greeting);
+        // emit GreetingSet11(address(this), _greeting);
+        // emit GreetingSet12(address(this), _greeting);
+        // emit GreetingSet13(address(this), _greeting);
+        // emit GreetingSet14(address(this), _greeting);
+        // emit GreetingSet15(address(this), _greeting);
+        // emit GreetingSet16(address(this), _greeting);
+        // emit GreetingSet17(address(this), _greeting);
+        // emit GreetingSet18(address(this), _greeting);
+        // emit GreetingSet19(address(this), _greeting);
+        // emit GreetingSet20(address(this), _greeting);
+        // emit GreetingSet21(address(this), _greeting);
+        // emit GreetingSet22(address(this), _greeting);
+        // emit GreetingSet23(address(this), _greeting);
+        // emit GreetingSet24(address(this), _greeting);
+        // emit GreetingSet25(address(this), _greeting);
     }
 
     function setGreeting2(string memory _greeting) public {
@@ -143,31 +142,31 @@ contract SillyLargeContract {
         greeting24 = _greeting;
         greeting25 = _greeting;
 
-        emit GreetingSet1(address(this), _greeting);
-        emit GreetingSet2(address(this), _greeting);
-        emit GreetingSet3(address(this), _greeting);
-        emit GreetingSet4(address(this), _greeting);
-        emit GreetingSet5(address(this), _greeting);
-        emit GreetingSet6(address(this), _greeting);
-        emit GreetingSet7(address(this), _greeting);
-        emit GreetingSet8(address(this), _greeting);
-        emit GreetingSet9(address(this), _greeting);
-        emit GreetingSet10(address(this), _greeting);
-        emit GreetingSet11(address(this), _greeting);
-        emit GreetingSet12(address(this), _greeting);
-        emit GreetingSet13(address(this), _greeting);
-        emit GreetingSet14(address(this), _greeting);
-        emit GreetingSet15(address(this), _greeting);
-        emit GreetingSet16(address(this), _greeting);
-        emit GreetingSet17(address(this), _greeting);
-        emit GreetingSet18(address(this), _greeting);
-        emit GreetingSet19(address(this), _greeting);
-        emit GreetingSet20(address(this), _greeting);
-        emit GreetingSet21(address(this), _greeting);
-        emit GreetingSet22(address(this), _greeting);
-        emit GreetingSet23(address(this), _greeting);
-        emit GreetingSet24(address(this), _greeting);
-        emit GreetingSet25(address(this), _greeting);
+        // emit GreetingSet1(address(this), _greeting);
+        // emit GreetingSet2(address(this), _greeting);
+        // emit GreetingSet3(address(this), _greeting);
+        // emit GreetingSet4(address(this), _greeting);
+        // emit GreetingSet5(address(this), _greeting);
+        // emit GreetingSet6(address(this), _greeting);
+        // emit GreetingSet7(address(this), _greeting);
+        // emit GreetingSet8(address(this), _greeting);
+        // emit GreetingSet9(address(this), _greeting);
+        // emit GreetingSet10(address(this), _greeting);
+        // emit GreetingSet11(address(this), _greeting);
+        // emit GreetingSet12(address(this), _greeting);
+        // emit GreetingSet13(address(this), _greeting);
+        // emit GreetingSet14(address(this), _greeting);
+        // emit GreetingSet15(address(this), _greeting);
+        // emit GreetingSet16(address(this), _greeting);
+        // emit GreetingSet17(address(this), _greeting);
+        // emit GreetingSet18(address(this), _greeting);
+        // emit GreetingSet19(address(this), _greeting);
+        // emit GreetingSet20(address(this), _greeting);
+        // emit GreetingSet21(address(this), _greeting);
+        // emit GreetingSet22(address(this), _greeting);
+        // emit GreetingSet23(address(this), _greeting);
+        // emit GreetingSet24(address(this), _greeting);
+        // emit GreetingSet25(address(this), _greeting);
     }
 
     function setGreeting3(string memory _greeting) public {
