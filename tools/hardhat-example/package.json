@@ -8,7 +8,7 @@
     "@ethersproject/providers": "^5.7.2",
     "@hashgraph/hedera-local": "^2.5.1",
     "@hashgraph/hethers": "^1.1.2",
-    "@hashgraph/sdk": "^2.19.0",
+    "@hashgraph/sdk": "^2.22.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.4",
     "@nomicfoundation/hardhat-toolbox": "^2.0.0",
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",
