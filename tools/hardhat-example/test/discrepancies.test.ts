@@ -9,7 +9,7 @@ import { defaultOverrides, getBigNumber, getRandomNumber } from './utils';
 import { HERC20 } from './utils/herc20';
 import { Networks } from './utils/networks';
 
-describe('SillyLargeContract', function() {
+describe('Demo discrepancies between hardhat and hedera local node', function() {
   const parallelDeployCount = 2;
   const parallelCallCount = 2;
 
@@ -301,14 +301,32 @@ describe('SillyLargeContract', function() {
       };
     }
 
-    const iterations = 100;
+    // Does consistently get balances correctly using both SDK and HERC20Util for withdraw() and deposit() calls
+    const iterations = 10;
 
+    let maxAmount = 1e6;
+
+    for (let i = 0; i < iterations; i++) {
+
+      console.log('simple iter:', i);
+
+      const depositAmount = getBigNumber(getRandomNumber(1, maxAmount), 0);
+      const { endingBalanceSigner: endingBalanceSignerDeposit } = await deposit(depositAmount);
+      maxAmount = endingBalanceSignerDeposit.toNumber();
+
+      const withdrawAmount = getBigNumber(getRandomNumber(1, maxAmount), 0);
+      const { endingBalanceSigner: endingBalanceSignerWithdraw } = await withdraw(withdrawAmount);
+      maxAmount = endingBalanceSignerWithdraw.toNumber();
+
+    }
+
+    // Does NOT consistently get balances correctly using both SDK and HERC20Util when using depositAndWithdraw()
     let maxDepositAmount = 1e6;
     let maxWithdrawAmount = 0; // initially no funds to withdraw
 
     for (let i = 0; i < iterations; i++) {
 
-      console.log('iter:', i);
+      console.log('depositAndWithdraw iter:', i);
 
       const minDepositAmount = Math.floor(maxDepositAmount/2);
 
@@ -326,15 +344,6 @@ describe('SillyLargeContract', function() {
       maxDepositAmount = _signerBalanceVaultA2.toNumber();
       maxWithdrawAmount = _signerBalanceVaultB2.toNumber()
 
-      // const depositAmount = getBigNumber(getRandomNumber(1, maxAmount), 0);
-      // const { endingBalanceSigner: endingBalanceSignerDeposit } = await deposit(depositAmount);
-      // maxAmount = endingBalanceSignerDeposit.toNumber();
-
-      // const withdrawAmount = getBigNumber(getRandomNumber(1, maxAmount), 0);
-      // const { endingBalanceSigner: endingBalanceSignerWithdraw } = await withdraw(withdrawAmount);
-      // maxAmount = endingBalanceSignerWithdraw.toNumber();
-
     }
-
   });
 });
