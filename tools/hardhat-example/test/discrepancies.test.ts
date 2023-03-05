@@ -270,7 +270,7 @@ describe('SillyLargeContract', function() {
       const [startingBalanceSignerA, startingBalanceSignerB] = await getTokenBalance([tokenA.address, tokenB.address], defaultTokenOwner.address);
 
       if (shouldDepositA) {
-        const depositAndWithdrawTx = await simpleVaultContract.depositAndWithdraw(tokenA.address, depositAmount, tokenA.address, withdrawAmount, defaultOverrides);
+        const depositAndWithdrawTx = await simpleVaultContract.depositAndWithdraw(tokenA.address, depositAmount, tokenB.address, withdrawAmount, defaultOverrides);
       } else {
         const depositAndWithdrawTx = await simpleVaultContract.depositAndWithdraw(tokenB.address, depositAmount, tokenA.address, withdrawAmount, defaultOverrides);
       }
