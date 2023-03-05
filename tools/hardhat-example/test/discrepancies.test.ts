@@ -114,4 +114,27 @@ describe('SillyLargeContract', function() {
 
     expect(rcs[0].transactionHash).to.not.eq(rcs[1].transactionHash, "txs have same hashes");
   });
+
+  it('should be able get correct ERC20 balance after transfer', async function () {
+    // Deploy ERC20 token contract
+    const MyToken = await ethers.getContractFactory('MyToken');
+    const myToken = await MyToken.deploy('MyToken', 'MT');
+
+    // Get initial balances of two accounts
+    const [account1, account2] = await ethers.getSigners();
+    const initialBalance1 = await myToken.balanceOf(account1.address);
+    const initialBalance2 = await myToken.balanceOf(account2.address);
+
+    // Transfer tokens from account1 to account2
+    const amount = 100;
+    await myToken.transfer(account2.address, amount);
+
+    // Get updated balances of the two accounts
+    const updatedBalance1 = await myToken.balanceOf(account1.address);
+    const updatedBalance2 = await myToken.balanceOf(account2.address);
+
+    // Assert that balances were updated correctly
+    expect(updatedBalance1).to.equal(initialBalance1.sub(amount));
+    expect(updatedBalance2).to.equal(initialBalance2.add(amount));
+  });
 });
