@@ -215,7 +215,7 @@ describe('SillyLargeContract', function() {
       return B;
     }
 
-    async function deposit(amount: BigNumber) {
+    async function deposit(amount: BigNumber): Promise<{endingBalanceSigner: BigNumber}> {
 
       const [startingBalanceVaultA, startingBalanceVaultB] = await getTokenBalance([tokenA.address, tokenB.address], simpleVaultContract.address);
       const [startingBalanceSignerA, startingBalanceSignerB] = await getTokenBalance([tokenA.address, tokenB.address], defaultTokenOwner.address);
@@ -232,9 +232,14 @@ describe('SillyLargeContract', function() {
       expect(endingBalanceSignerA).to.be.eq(startingBalanceSignerA.sub(amount));
       expect(endingBalanceSignerB).to.be.eq(startingBalanceSignerB.sub(amount));
 
+      const signerVaultBalanceA = await simpleVaultContract.vaultBalances(tokenA.address, defaultTokenOwner.address);
+
+      return {
+        endingBalanceSigner: signerVaultBalanceA,
+      };
     }
 
-    async function withdraw(amount: BigNumber) {
+    async function withdraw(amount: BigNumber): Promise<{endingBalanceSigner: BigNumber}> {
 
       const [startingBalanceVaultA, startingBalanceVaultB] = await getTokenBalance([tokenA.address, tokenB.address], simpleVaultContract.address);
       const [startingBalanceSignerA, startingBalanceSignerB] = await getTokenBalance([tokenA.address, tokenB.address], defaultTokenOwner.address);
@@ -251,15 +256,31 @@ describe('SillyLargeContract', function() {
       expect(endingBalanceSignerA).to.be.eq(startingBalanceSignerA.add(amount));
       expect(endingBalanceSignerB).to.be.eq(startingBalanceSignerB.add(amount));
 
+      const signerVaultBalanceA = await simpleVaultContract.vaultBalances(tokenA.address, defaultTokenOwner.address);
+
+      return {
+        endingBalanceSigner: signerVaultBalanceA,
+      };
+
     }
 
-    const depositAmount = getBigNumber(getRandomNumber(100, 1e6), 0);
+    const iterations = 50;
 
-    await deposit(depositAmount);
+    let maxAmount = 1e6;
 
-    const withdrawAmount = getBigNumber(getRandomNumber(100, 1e6), 0);
+    for (let i = 0; i < iterations; i++) {
 
-    await withdraw(withdrawAmount);
+      console.log('iter:', i);
+
+      const depositAmount = getBigNumber(getRandomNumber(1, maxAmount), 0);
+      const { endingBalanceSigner: endingBalanceSignerDeposit } = await deposit(depositAmount);
+      maxAmount = endingBalanceSignerDeposit.toNumber();
+
+      const withdrawAmount = getBigNumber(getRandomNumber(1, maxAmount), 0);
+      const { endingBalanceSigner: endingBalanceSignerWithdraw } = await withdraw(withdrawAmount);
+      maxAmount = endingBalanceSignerWithdraw.toNumber();
+
+    }
 
   });
 });

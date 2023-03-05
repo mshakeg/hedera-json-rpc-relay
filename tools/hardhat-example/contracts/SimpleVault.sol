@@ -9,6 +9,7 @@ import "./_precompile-hts/HederaResponseCodes.sol";
 contract SimpleVault {
 
     mapping(address => bool) public isAssociated;
+    mapping(address => mapping(address => uint64)) public vaultBalances;
 
     function associate(address token) external {
         if (!isAssociated[token]) {
@@ -19,9 +20,11 @@ contract SimpleVault {
 
     function deposit(address token, uint64 amount) external payable {
         SafeHTS.safeTransferToken(token, msg.sender, address(this), int64(amount));
+        vaultBalances[token][msg.sender] += amount;
     }
 
     function withdraw(address token, uint64 amount) external {
         SafeHTS.safeTransferToken(token, address(this), msg.sender, int64(amount));
+        vaultBalances[token][msg.sender] -= amount;
     }
 }
