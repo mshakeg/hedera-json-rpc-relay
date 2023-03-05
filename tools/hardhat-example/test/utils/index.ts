@@ -4,5 +4,6 @@ export * from './encoding';
 export * from './formatting';
 export * from './hedera';
 export * from './herc20';
+export * from './math';
 export * from './numbers';
 export * from './utils';
