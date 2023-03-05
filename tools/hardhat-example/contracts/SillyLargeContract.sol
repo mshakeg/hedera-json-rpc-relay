@@ -54,6 +54,14 @@ contract SillyLargeContract {
     event GreetingSet24(address greeter, string greeting);
     event GreetingSet25(address greeter, string greeting);
 
+    function setManyGreetings(string memory commonGreeting) public {
+        setGreeting1(commonGreeting);
+        setGreeting2(commonGreeting);
+        setGreeting3(commonGreeting);
+        setGreeting4(commonGreeting);
+        setGreeting5(commonGreeting);
+    }
+
     function setGreeting1(string memory _greeting) public {
         greeting1 = _greeting;
         greeting2 = _greeting;

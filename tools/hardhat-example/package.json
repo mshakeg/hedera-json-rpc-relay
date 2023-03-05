@@ -6,7 +6,7 @@
   "devDependencies": {
     "@ethersproject/logger": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
-    "@hashgraph/hedera-local": "^2.4.2",
+    "@hashgraph/hedera-local": "^2.5.1",
     "@hashgraph/hethers": "^1.1.2",
     "@hashgraph/sdk": "^2.19.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.4",
@@ -61,6 +61,7 @@
     "test:gbtc:testnet": "npx hardhat --network h_testnet test test/get-transaction-count.test.ts",
     "test:llc": "npx hardhat test test/low-level-call.test.ts",
     "test:llc:local": "npx hardhat --network h_local test test/low-level-call.test.ts",
+    "test:dis:hardhat_local": "npx hardhat --network hardhat_local test test/discrepancies.test.ts",
     "hedera-start": "npx @hashgraph/hedera-local start --limits=false --dev=true",
     "hedera-stop": "npx @hashgraph/hedera-local stop",
     "hardhat-start": "npx hardhat node"
