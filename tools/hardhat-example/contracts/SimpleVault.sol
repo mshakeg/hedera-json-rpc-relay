@@ -18,12 +18,17 @@ contract SimpleVault {
         }
     }
 
-    function deposit(address token, uint64 amount) external payable {
+    function depositAndWithdraw(address depositToken, uint64 depositAmount, address withdrawToken, uint64 withdrawAmount) public {
+        deposit(depositToken, depositAmount);
+        withdraw(withdrawToken, withdrawAmount);
+    }
+
+    function deposit(address token, uint64 amount) public {
         SafeHTS.safeTransferToken(token, msg.sender, address(this), int64(amount));
         vaultBalances[token][msg.sender] += amount;
     }
 
-    function withdraw(address token, uint64 amount) external {
+    function withdraw(address token, uint64 amount) public {
         SafeHTS.safeTransferToken(token, address(this), msg.sender, int64(amount));
         vaultBalances[token][msg.sender] -= amount;
     }

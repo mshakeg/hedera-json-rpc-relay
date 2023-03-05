@@ -264,21 +264,75 @@ describe('SillyLargeContract', function() {
 
     }
 
-    const iterations = 50;
+    async function depositAndWithdraw(shouldDepositA: boolean, depositAmount: BigNumber, withdrawAmount: BigNumber): Promise<{signerBalanceVaultA: BigNumber, signerBalanceVaultB: BigNumber}> {
 
-    let maxAmount = 1e6;
+      const [startingBalanceVaultA, startingBalanceVaultB] = await getTokenBalance([tokenA.address, tokenB.address], simpleVaultContract.address);
+      const [startingBalanceSignerA, startingBalanceSignerB] = await getTokenBalance([tokenA.address, tokenB.address], defaultTokenOwner.address);
+
+      if (shouldDepositA) {
+        const depositAndWithdrawTx = await simpleVaultContract.depositAndWithdraw(tokenA.address, depositAmount, tokenA.address, withdrawAmount, defaultOverrides);
+      } else {
+        const depositAndWithdrawTx = await simpleVaultContract.depositAndWithdraw(tokenB.address, depositAmount, tokenA.address, withdrawAmount, defaultOverrides);
+      }
+
+      const [endingBalanceVaultA, endingBalanceVaultB] = await getTokenBalance([tokenA.address, tokenB.address], simpleVaultContract.address);
+      const [endingBalanceSignerA, endingBalanceSignerB] = await getTokenBalance([tokenA.address, tokenB.address], defaultTokenOwner.address);
+
+      if (shouldDepositA) {
+        expect(endingBalanceVaultA).to.be.eq(startingBalanceVaultA.add(depositAmount));
+        expect(endingBalanceVaultB).to.be.eq(startingBalanceVaultB.sub(withdrawAmount));
+
+        expect(endingBalanceSignerA).to.be.eq(startingBalanceSignerA.sub(depositAmount));
+        expect(endingBalanceSignerB).to.be.eq(startingBalanceSignerB.add(withdrawAmount));
+      } else { // deposit B
+        expect(endingBalanceVaultB).to.be.eq(startingBalanceVaultB.add(depositAmount));
+        expect(endingBalanceVaultA).to.be.eq(startingBalanceVaultA.sub(withdrawAmount));
+
+        expect(endingBalanceSignerB).to.be.eq(startingBalanceSignerB.sub(depositAmount));
+        expect(endingBalanceSignerA).to.be.eq(startingBalanceSignerA.add(withdrawAmount));
+      }
+
+      const signerVaultBalanceA = await simpleVaultContract.vaultBalances(tokenA.address, defaultTokenOwner.address);
+      const signerVaultBalanceB = await simpleVaultContract.vaultBalances(tokenB.address, defaultTokenOwner.address);
+
+      return {
+        signerBalanceVaultA: signerVaultBalanceA,
+        signerBalanceVaultB: signerVaultBalanceB
+      };
+    }
+
+    const iterations = 100;
+
+    let maxDepositAmount = 1e6;
+    let maxWithdrawAmount = 0; // initially no funds to withdraw
 
     for (let i = 0; i < iterations; i++) {
 
       console.log('iter:', i);
 
-      const depositAmount = getBigNumber(getRandomNumber(1, maxAmount), 0);
-      const { endingBalanceSigner: endingBalanceSignerDeposit } = await deposit(depositAmount);
-      maxAmount = endingBalanceSignerDeposit.toNumber();
+      const minDepositAmount = Math.floor(maxDepositAmount/2);
 
-      const withdrawAmount = getBigNumber(getRandomNumber(1, maxAmount), 0);
-      const { endingBalanceSigner: endingBalanceSignerWithdraw } = await withdraw(withdrawAmount);
-      maxAmount = endingBalanceSignerWithdraw.toNumber();
+      let depositAmount = getBigNumber(getRandomNumber(minDepositAmount, maxDepositAmount), 0);
+      let withdrawAmount = maxWithdrawAmount ? getBigNumber(getRandomNumber(1, maxWithdrawAmount), 0) : BigNumber.from(0);
+
+      const {signerBalanceVaultA: _signerBalanceVaultA1, signerBalanceVaultB: _signerBalanceVaultB1} = await depositAndWithdraw(true, depositAmount, withdrawAmount);
+
+      maxWithdrawAmount = _signerBalanceVaultA1.toNumber();
+      const minWithdrawAmount = Math.floor(maxWithdrawAmount/2);
+
+      withdrawAmount = getBigNumber(getRandomNumber(minWithdrawAmount, maxWithdrawAmount), 0);
+      const {signerBalanceVaultA: _signerBalanceVaultA2, signerBalanceVaultB: _signerBalanceVaultB2} = await depositAndWithdraw(false, depositAmount, withdrawAmount);
+
+      maxDepositAmount = _signerBalanceVaultA2.toNumber();
+      maxWithdrawAmount = _signerBalanceVaultB2.toNumber()
+
+      // const depositAmount = getBigNumber(getRandomNumber(1, maxAmount), 0);
+      // const { endingBalanceSigner: endingBalanceSignerDeposit } = await deposit(depositAmount);
+      // maxAmount = endingBalanceSignerDeposit.toNumber();
+
+      // const withdrawAmount = getBigNumber(getRandomNumber(1, maxAmount), 0);
+      // const { endingBalanceSigner: endingBalanceSignerWithdraw } = await withdraw(withdrawAmount);
+      // maxAmount = endingBalanceSignerWithdraw.toNumber();
 
     }
 
