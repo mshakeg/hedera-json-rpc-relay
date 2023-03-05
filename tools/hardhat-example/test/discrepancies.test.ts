@@ -42,6 +42,7 @@ describe('SillyLargeContract', function() {
     }
 
     expect(contracts.length).to.equal(parallelDeployCount);
+    expect(deployedContracts[0].contractAddress).to.not.eq(deployedContracts[1].contractAddress, "contracts have same addresses");
   });
 
   it('should be able to deploy many SillyLargeContract in parallel with gas overrides', async function() {
@@ -63,6 +64,7 @@ describe('SillyLargeContract', function() {
     }
 
     expect(contracts.length).to.equal(parallelDeployCount);
+    expect(deployedContracts[0].contractAddress).to.not.eq(deployedContracts[1].contractAddress, "contracts have same addresses");
   });
 
   it('should be able to call setManyGreetings function in parallel', async function() {
@@ -84,6 +86,8 @@ describe('SillyLargeContract', function() {
     for (const rc of rcs) {
       console.log(rc.transactionHash);
     }
+
+    expect(rcs[0].transactionHash).to.not.eq(rcs[1].transactionHash, "txs have same hashes");
   });
 
   it('should be able to call setManyGreetings function in parallel with gas overrides', async function() {
@@ -107,5 +111,7 @@ describe('SillyLargeContract', function() {
     for (const rc of rcs) {
       console.log(rc.transactionHash);
     }
+
+    expect(rcs[0].transactionHash).to.not.eq(rcs[1].transactionHash, "txs have same hashes");
   });
 });
