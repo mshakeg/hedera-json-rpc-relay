@@ -120,8 +120,6 @@ describe('Demo discrepancies between hardhat and hedera local node', function() 
     expect(rcs[0].transactionHash).to.not.eq(rcs[1].transactionHash, "txs have same hashes");
   });
 
-
-
   it('should be able to deposit and withdraw from vault repeatedly and get correct balances', async function () {
 
     if (network.name === Networks.hardhat_local) {
