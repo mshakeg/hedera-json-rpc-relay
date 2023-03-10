@@ -18,7 +18,8 @@
  *
  */
 
-import { BigNumberish, Contract, ContractTransaction } from 'ethers';
+import { expect } from 'chai';
+import { BigNumberish, Contract, ContractTransaction, utils } from 'ethers';
 import {ethers} from 'hardhat';
 import { solidityPack } from "ethers/lib/utils";
 import { defaultAbiCoder } from "@ethersproject/abi";
@@ -83,7 +84,15 @@ describe('Multicaller', function() {
       data.push(encodeProcessLongInput(a, b, c, d, e, f, g));
     }
 
-    console.log('data length:', data.length);
+    // let totalBytes = 0;
+
+    // for (const d of data) {
+    //   const bytes = utils.arrayify(d);
+    //   totalBytes += bytes.length;
+    // }
+
+    // console.log('data length:', data.length);
+    // console.log('bytes length:', totalBytes);
 
     if (callStatic) {
       const res = await multicaller.callStatic.multicall(data, {
@@ -97,7 +106,8 @@ describe('Multicaller', function() {
       })) as ContractTransaction;
 
       const multicallRc = await multicallTx.wait();
-      console.log('status:', multicallRc.status);
+      // console.log('status:', multicallRc.status);
+      expect(multicallRc.status).to.be.eq(1);
     }
 
   }
