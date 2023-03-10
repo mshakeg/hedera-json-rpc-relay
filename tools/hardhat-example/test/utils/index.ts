@@ -1,6 +1,7 @@
 export * from './address';
 export * from './constants';
 export * from './encoding';
+export * from './ethers';
 export * from './formatting';
 export * from './hedera';
 export * from './herc20';

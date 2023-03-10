@@ -20,7 +20,6 @@
 
 import "dotenv/config";
 import "@nomiclabs/hardhat-ethers";
-import '@nomiclabs/hardhat-waffle';
 import "@typechain/hardhat";
 import "hardhat-network-metadata";
 import "@nomicfoundation/hardhat-chai-matchers";
@@ -74,12 +73,15 @@ const config = {
   networks: {
     hardhat: {
       allowUnlimitedContractSize: true,
-      blockGasLimit: 15_000_000,
+      blockGasLimit: 0x1fffffffffffff,
+      gas: 1_000_000_000,
       // loggingEnabled: true
     },
     hardhat_local: { // custom hardhat local node; start with: npx hardhat node
       url: "http://127.0.0.1:8545",
       allowUnlimitedContractSize: true,
+      blockGasLimit: 0x1fffffffffffff,
+      gas: 1_000_000_000,
       timeout: 60_000
     },
     h_local: {
@@ -115,6 +117,10 @@ const config = {
       accounts: [process.env.DEPLOYER_TESTNET || "", process.env.TESTNET_DEV || ""],
       timeout: 60_000
     },
+    eth_mainnet: {
+      url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
+      timeout: 60_000
+    }
   },
   typechain: {
     outDir: "types",
