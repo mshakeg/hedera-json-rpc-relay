@@ -181,9 +181,24 @@ describe('Multicaller', function() {
 
   });
 
+  // fails on hedera local node; however the following test case with iterations set to 134 works
   it('should be able to make 1500 or more multicall processLongInput transactions', async function() {
 
     await multicallProcessLongInput(1500, false);
+
+  });
+
+  // this test case does NOT on the hedera local node fail, unlike the test cases above and below
+  it('should be able to make 134 or more multicall processLongInput transactions', async function() {
+
+    await multicallProcessLongInput(134, false);
+
+  });
+
+  // fails on hedera local node like the test case where iterations is set to 1_500
+  it('should be able to make 135 or more multicall processLongInput transactions', async function() {
+
+    await multicallProcessLongInput(135, false);
 
   });
 
