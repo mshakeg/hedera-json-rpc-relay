@@ -117,6 +117,10 @@ const config = {
       accounts: [process.env.DEPLOYER_TESTNET || "", process.env.TESTNET_DEV || ""],
       timeout: 60_000
     },
+    eth_mainnet: {
+      url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
+      timeout: 60_000
+    }
   },
   typechain: {
     outDir: "types",

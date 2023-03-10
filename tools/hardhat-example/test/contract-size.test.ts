@@ -29,7 +29,8 @@ describe('Get Contract Storage Size', function () {
   it('get contract size', async function () {
 
     // const contractAddress = '0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640'; // UniV3 usdc/weth/0.05% pool
-    const contractAddress = '0x3Db0338922CDE54A66E0c585011249915d32d225';
+    const contractAddress = '0xbac1b3b12bf68210354a147202c553478a971efb'; // UniV3 ICHI/SHIB/0.3% pool
+    // const contractAddress = '0x3Db0338922CDE54A66E0c585011249915d32d225';
     const contract = new ethers.Contract(contractAddress, [], ethers.provider);
 
     const { storageValues, totalSizeKB } = await getAllStorageUsed(contract);
