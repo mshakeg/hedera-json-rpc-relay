@@ -5,86 +5,92 @@ import { getHbarValue } from './utils';
 
 describe('Investigate behaviour of contract deletion', function() {
 
-  it('should be able to delete contract via Deletable#destroy()', async function() {
+  const iterations = 4; // done to demonstrate caching on hardhat local node; which does not exist on the hedera local node
 
-    const accounts = await ethers.getSigners();
-    const account0 = accounts[0];
+  for (let i = 0; i < iterations; i++) {
 
-    const DeletableFactory = (await ethers.getContractFactory("DeletableFactory")) as DeletableFactory__factory;
-    const deletableFactory = (await DeletableFactory.deploy()) as DeletableFactory;
+    it(`iteration: ${i}; should be able to delete contract via Deletable#destroy()`, async function() {
 
-    const createTx = await deletableFactory.createDeletable();
-    const createRc = await createTx.wait();
+      const accounts = await ethers.getSigners();
+      const account0 = accounts[0];
 
-    const deletableAddress = createRc.events?.[0].args?.['deletable'];
+      const DeletableFactory = (await ethers.getContractFactory("DeletableFactory")) as DeletableFactory__factory;
+      const deletableFactory = (await DeletableFactory.deploy()) as DeletableFactory;
 
-    let doesDeletableExist = await deletableFactory.doesDeletableExist(deletableAddress);
+      const createTx = await deletableFactory.createDeletable();
+      const createRc = await createTx.wait();
 
-    expect(doesDeletableExist).to.be.eq(true);
+      const deletableAddress = createRc.events?.[0].args?.['deletable'];
 
-    const Deletable = (await ethers.getContractFactory("Deletable")) as Deletable__factory;
-    const deletable = Deletable.attach(deletableAddress);
+      let doesDeletableExist = await deletableFactory.doesDeletableExist(deletableAddress);
 
-    const closeTx = await deletable.destroy({value: getHbarValue(10) });
-    const closeRc = await closeTx.wait();
+      expect(doesDeletableExist).to.be.eq(true);
 
-    doesDeletableExist = await deletableFactory.doesDeletableExist(deletableAddress);
-    expect(doesDeletableExist).to.be.eq(false);
-  });
+      const Deletable = (await ethers.getContractFactory("Deletable")) as Deletable__factory;
+      const deletable = Deletable.attach(deletableAddress);
 
-  it('should be able to delete deletable2 and re-create it', async function() {
+      const closeTx = await deletable.destroy({value: getHbarValue(10) });
+      const closeRc = await closeTx.wait();
 
-    const accounts = await ethers.getSigners();
-    const account0 = accounts[0];
+      doesDeletableExist = await deletableFactory.doesDeletableExist(deletableAddress);
+      expect(doesDeletableExist).to.be.eq(false);
+    });
 
-    const DeletableFactory = (await ethers.getContractFactory("DeletableFactory")) as DeletableFactory__factory;
-    const deletableFactory = (await DeletableFactory.deploy()) as DeletableFactory;
+    it(`iteration: ${i}; should be able to delete deletable2 and re-create it`, async function() {
 
-    let createTx = await deletableFactory.createDeletable2();
-    let createRc = await createTx.wait();
+      const accounts = await ethers.getSigners();
+      const account0 = accounts[0];
 
-    const deletable2Address = createRc.events?.[0].args?.['deletable'];
+      const DeletableFactory = (await ethers.getContractFactory("DeletableFactory")) as DeletableFactory__factory;
+      const deletableFactory = (await DeletableFactory.deploy()) as DeletableFactory;
 
-    let doesDeletable2Exist = await deletableFactory.doesDeletableExist2(deletable2Address);
-    expect(doesDeletable2Exist).to.be.eq(true);
+      let createTx = await deletableFactory.createDeletable2();
+      let createRc = await createTx.wait();
 
-    await expect(deletableFactory.createDeletable2()).to.be.revertedWithoutReason();
+      const deletable2Address = createRc.events?.[0].args?.['deletable'];
 
-    doesDeletable2Exist = await deletableFactory.doesDeletableExist2(deletable2Address);
-    expect(doesDeletable2Exist).to.be.eq(true);
+      let doesDeletable2Exist = await deletableFactory.doesDeletableExist2(deletable2Address);
+      expect(doesDeletable2Exist).to.be.eq(true);
 
-    const Deletable = (await ethers.getContractFactory("Deletable")) as Deletable__factory;
-    const deletable2 = Deletable.attach(deletable2Address);
+      await expect(deletableFactory.createDeletable2()).to.be.revertedWithoutReason();
 
-    let destroyTx = await deletable2.destroy({value: getHbarValue(10) });
-    let destroyRc = await destroyTx.wait();
+      doesDeletable2Exist = await deletableFactory.doesDeletableExist2(deletable2Address);
+      expect(doesDeletable2Exist).to.be.eq(true);
 
-    doesDeletable2Exist = await deletableFactory.doesDeletableExist(deletable2Address);
-    expect(doesDeletable2Exist).to.be.eq(false);
+      const Deletable = (await ethers.getContractFactory("Deletable")) as Deletable__factory;
+      const deletable2 = Deletable.attach(deletable2Address);
 
-    createTx = await deletableFactory.createDeletable2();
-    createRc = await createTx.wait();
+      let destroyTx = await deletable2.destroy({value: getHbarValue(10) });
+      let destroyRc = await destroyTx.wait();
 
-    const deletable2AddressOnRecreate = createRc.events?.[0].args?.['deletable'];
+      doesDeletable2Exist = await deletableFactory.doesDeletableExist(deletable2Address);
+      expect(doesDeletable2Exist).to.be.eq(false);
 
-    expect(deletable2Address).to.be.eq(deletable2AddressOnRecreate);
+      createTx = await deletableFactory.createDeletable2();
+      createRc = await createTx.wait();
 
-    doesDeletable2Exist = await deletableFactory.doesDeletableExist2(deletable2Address);
-    expect(doesDeletable2Exist).to.be.eq(true);
+      const deletable2AddressOnRecreate = createRc.events?.[0].args?.['deletable'];
 
-    destroyTx = await deletable2.destroy({value: getHbarValue(10) });
-    destroyRc = await destroyTx.wait();
+      expect(deletable2Address).to.be.eq(deletable2AddressOnRecreate);
 
-    doesDeletable2Exist = await deletableFactory.doesDeletableExist(deletable2Address);
-    expect(doesDeletable2Exist).to.be.eq(false);
+      doesDeletable2Exist = await deletableFactory.doesDeletableExist2(deletable2Address);
+      expect(doesDeletable2Exist).to.be.eq(true);
 
-    createTx = await deletableFactory.createDeletable2();
-    createRc = await createTx.wait();
+      destroyTx = await deletable2.destroy({value: getHbarValue(10) });
+      destroyRc = await destroyTx.wait();
 
-    const deletable2AddressOnRecreate2 = createRc.events?.[0].args?.['deletable'];
+      doesDeletable2Exist = await deletableFactory.doesDeletableExist(deletable2Address);
+      expect(doesDeletable2Exist).to.be.eq(false);
 
-    expect(deletable2AddressOnRecreate2).to.be.eq(deletable2AddressOnRecreate);
+      createTx = await deletableFactory.createDeletable2();
+      createRc = await createTx.wait();
 
-  });
+      const deletable2AddressOnRecreate2 = createRc.events?.[0].args?.['deletable'];
+
+      expect(deletable2AddressOnRecreate2).to.be.eq(deletable2AddressOnRecreate);
+
+    });
+
+  }
 
 });
