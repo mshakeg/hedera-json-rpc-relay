@@ -48,7 +48,7 @@ describe('Investigate behaviour of contract deletion', function() {
     let doesDeletable2Exist = await deletableFactory.doesDeletableExist2(deletable2Address);
     expect(doesDeletable2Exist).to.be.eq(true);
 
-    await expect(deletableFactory.createDeletable2()).to.be.revertedWithoutReason;
+    await expect(deletableFactory.createDeletable2()).to.be.revertedWithoutReason();
 
     doesDeletable2Exist = await deletableFactory.doesDeletableExist2(deletable2Address);
     expect(doesDeletable2Exist).to.be.eq(true);
