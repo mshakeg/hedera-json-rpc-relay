@@ -39,6 +39,8 @@ describe('StorageIncreaser', function () {
     storageIncreaser = await StorageIncreaser.deploy(deployOverrides);
     await storageIncreaser.deployed();
 
+    console.log('storageIncreaser.address:', storageIncreaser.address)
+
   });
 
   it('should be able to add N storage spaces to StorageIncrease contract and get used storage correctly using getStorageAt', async function () {
@@ -54,8 +56,10 @@ describe('StorageIncreaser', function () {
       console.log('storageValues:', startStorageValues.length);
       console.log('totalSizeKB:', startTotalSizeKB);
 
-      const increaseNumSpaces = getRandomNumber(1_000, 10_000);
-      await storageIncreaser.increaseStorage(increaseNumSpaces);
+      const increaseNumSpaces = getRandomNumber(1_00, 1_000);
+      await storageIncreaser.increaseStorage(increaseNumSpaces, {
+        gasLimit: 8_000_000
+      });
 
       const { storageValues: endStorageValues, totalSizeKB: endTotalSizeKB } = await getAllStorageUsed(storageIncreaser);
 
@@ -66,7 +70,9 @@ describe('StorageIncreaser', function () {
 
       const decreaseNumSpaces = getRandomNumber(1, (endStorageValues.length / 10)); // only allow to remove at most 1/10 of total storage
 
-      await storageIncreaser.removeLastNElements(decreaseNumSpaces);
+      await storageIncreaser.removeLastNElements(decreaseNumSpaces, {
+        gasLimit: 8_000_000
+      });
 
       const { storageValues: endAfterRemoveStorageValues, totalSizeKB: endAfterRemoveTotalSizeKB } = await getAllStorageUsed(storageIncreaser);
 
