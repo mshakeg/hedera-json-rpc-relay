@@ -10,6 +10,7 @@ export async function getBytecodeSize(contractName: string) {
   return artifact.bytecode.length / 2; // Divide by 2 to get the size in bytes
 }
 
+// does not working on contracts that have dynamic types such as mapping and lists
 export async function getAllStorageUsed(contract: Contract) {
 
   // Get the number of storage slots used by the contract

@@ -69,6 +69,8 @@
     "test:si:local": "npx hardhat --network h_local test test/storage-increaser.test.ts",
     "test:cs:local": "npx hardhat --network h_local test test/contract-size.test.ts",
     "test:cs:eth_mainnet": "npx hardhat --network eth_mainnet test test/contract-size.test.ts",
+    "test:cs:ssm": "npx hardhat test test/silly-small-contract.test.ts",
+    "test:cs:ssm:local": "npx hardhat --network h_local test test/silly-small-contract.test.ts",
     "hedera-start": "npx @hashgraph/hedera-local start --limits=false --dev=true --turbo=true",
     "hedera-stop": "npx @hashgraph/hedera-local stop",
     "hardhat-start": "npx hardhat node"
