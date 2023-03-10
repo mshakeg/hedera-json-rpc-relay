@@ -18,7 +18,7 @@
  *
  */
 
-import { BigNumberish, Contract } from 'ethers';
+import { BigNumberish, Contract, ContractTransaction } from 'ethers';
 import {ethers} from 'hardhat';
 import { solidityPack } from "ethers/lib/utils";
 import { defaultAbiCoder } from "@ethersproject/abi";
@@ -26,7 +26,7 @@ import { defaultAbiCoder } from "@ethersproject/abi";
 import {
   Multicaller__factory,
   Multicaller,
-  VeryLongInputStruct
+  // VeryLongInputStruct
 } from '../types';
 
 import {
@@ -68,12 +68,12 @@ describe('Multicaller', function() {
     );
   }
 
-  function encodeProcessVeryLongInput(veryLongInputStruct: VeryLongInputStruct): string {
-    const processVeryLongInputEncoding = multicaller.interface.encodeFunctionData("processVeryLongInput", [veryLongInputStruct]);
-    return processVeryLongInputEncoding;
-  }
+  // function encodeProcessVeryLongInput(veryLongInputStruct: VeryLongInputStruct): string {
+  //   const processVeryLongInputEncoding = multicaller.interface.encodeFunctionData("processVeryLongInput", [veryLongInputStruct]);
+  //   return processVeryLongInputEncoding;
+  // }
 
-  async function multicallProcessLongInput(iterations: number) {
+  async function multicallProcessLongInput(iterations: number, callStatic: boolean = true) {
 
     const data: string[] = [];
 
@@ -85,11 +85,20 @@ describe('Multicaller', function() {
 
     console.log('data length:', data.length);
 
-    const res = await multicaller.callStatic.multicall(data, {
-      gasLimit: 15_000_000
-    });
+    if (callStatic) {
+      const res = await multicaller.callStatic.multicall(data, {
+        gasLimit: 8_000_000
+      });
 
-    console.log('res length:', res.length);
+      console.log('res length:', res.length);
+    } else {
+      const multicallTx = (await multicaller.multicall(data, {
+        gasLimit: 8_000_000
+      })) as ContractTransaction;
+
+      const multicallRc = await multicallTx.wait();
+      console.log('status:', multicallRc.status);
+    }
 
   }
 
@@ -123,9 +132,33 @@ describe('Multicaller', function() {
     console.log(res);
   });
 
+  it('should be able to multicall processShortInput transaction', async function() {
+
+    const iterations = 3;
+    const data: string[] = [];
+
+    for (let i = 0; i < iterations; i++) {
+      data.push(encodeProcessShortInput(i));
+    }
+
+    const multicallTx = (await multicaller.multicall(data, {
+      gasLimit: 5_000_000
+    })) as ContractTransaction;
+
+    const multicallRc = await multicallTx.wait();
+    console.log('status:', multicallRc.status);
+
+  });
+
   it('should be able to make multicall 42 or less processLongInput calls', async function() {
 
     await multicallProcessLongInput(42);
+
+  });
+
+  it('should be able to make multicall 42 or less processLongInput transactions', async function() {
+
+    await multicallProcessLongInput(42, false);
 
   });
 
@@ -136,9 +169,37 @@ describe('Multicaller', function() {
 
   });
 
+  it('should be able to make 43 or more multicall processLongInput transactions', async function() {
+
+    await multicallProcessLongInput(43, false);
+
+  });
+
+  it('should be able to make 1500 or more multicall processLongInput calls', async function() {
+
+    await multicallProcessLongInput(1500);
+
+  });
+
+  it('should be able to make 1500 or more multicall processLongInput transactions', async function() {
+
+    await multicallProcessLongInput(1500, false);
+
+  });
+
+  /**
+   * @note The following test cases are commented out for the following reason:
+   * 8 million gas(maximum allowable gas per transaction on hedera) is insufficient for any of the following test cases
+   */
   it('should be able to make 1637 or less multicall processLongInput calls', async function() {
 
     await multicallProcessLongInput(1637);
+
+  });
+
+  it('should be able to make 1637 or less multicall processLongInput transactions', async function() {
+
+    await multicallProcessLongInput(1637, false);
 
   });
 
@@ -149,16 +210,34 @@ describe('Multicaller', function() {
 
   });
 
+  it('should be able to make 1638 or more multicall processLongInput transactions', async function() {
+
+    await multicallProcessLongInput(1638, false);
+
+  });
+
   it('should be able to make 2_936 or more multicall processLongInput calls', async function() {
 
     await multicallProcessLongInput(2_936);
 
   });
 
-  // fails on hardhat local node on 2_937+
+  it('should be able to make 2_936 or more multicall processLongInput transactions', async function() {
+
+    await multicallProcessLongInput(2_936, false);
+
+  });
+
+  // fails on hardhat local node on 2_937+ due to insufficient gas
   it('should be able to make 2_937 or more multicall processLongInput calls', async function() {
 
     await multicallProcessLongInput(2_937);
+
+  });
+
+  it('should be able to make 2_937 or more multicall processLongInput transactions', async function() {
+
+    await multicallProcessLongInput(2_937, false);
 
   });
 
