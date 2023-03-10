@@ -21,9 +21,10 @@
 import { Contract } from 'ethers';
 import {ethers} from 'hardhat';
 
-import {
-  deployOverrides
-} from './utils';
+// requires large gas limit for large contract
+const deployOverrides = {
+  gasLimit: 100_000_000
+};
 
 // type SuccessPromiseSettledResults = PromiseSettledResult<Contract>[]
 type SuccessContractPromiseSettledResults = {

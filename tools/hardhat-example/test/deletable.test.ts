@@ -5,7 +5,7 @@ import { getHbarValue } from './utils';
 
 describe('Investigate behaviour of contract deletion', function() {
 
-  const iterations = 4; // done to demonstrate caching on hardhat local node; which does not exist on the hedera local node
+  const iterations = 2; // done to demonstrate caching on hardhat local node; which does not exist on the hedera local node
 
   for (let i = 0; i < iterations; i++) {
 

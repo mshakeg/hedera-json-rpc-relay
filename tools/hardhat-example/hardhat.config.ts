@@ -73,12 +73,15 @@ const config = {
   networks: {
     hardhat: {
       allowUnlimitedContractSize: true,
-      blockGasLimit: 15_000_000,
+      blockGasLimit: 0x1fffffffffffff,
+      gas: 1_000_000_000,
       // loggingEnabled: true
     },
     hardhat_local: { // custom hardhat local node; start with: npx hardhat node
       url: "http://127.0.0.1:8545",
       allowUnlimitedContractSize: true,
+      blockGasLimit: 0x1fffffffffffff,
+      gas: 1_000_000_000,
       timeout: 60_000
     },
     h_local: {

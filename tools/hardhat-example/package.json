@@ -55,6 +55,7 @@
     "test:hec": "npx hardhat test test/error-contract.test.ts",
     "test:slc": "npx hardhat test test/silly-large-contract.test.ts",
     "test:slc:testnet": "npx hardhat --network h_testnet test test/silly-large-contract.test.ts",
+    "test:smc": "npx hardhat test test/silly-medium-contract.test.ts",
     "test:smc:testnet": "npx hardhat --network h_testnet test test/silly-medium-contract.test.ts",
     "test:gb:testnet": "npx hardhat --network h_testnet test test/get-blocks.test.ts",
     "test:gbtc:testnet": "npx hardhat --network h_testnet test test/get-transaction-count.test.ts",
