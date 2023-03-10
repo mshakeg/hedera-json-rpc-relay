@@ -64,8 +64,9 @@
     "test:dis:hardhat_local": "npx hardhat --network hardhat_local test test/discrepancies.test.ts",
     "test:dis:local": "npx hardhat --network h_local test test/discrepancies.test.ts",
     "test:d": "npx hardhat test test/deletable.test.ts",
-    "test:si": "npx hardhat test test/storage-increaser.test.ts",
     "test:d:local": "npx hardhat --network h_local test test/deletable.test.ts",
+    "test:si": "npx hardhat test test/storage-increaser.test.ts",
+    "test:si:local": "npx hardhat --network h_local test test/storage-increaser.test.ts",
     "hedera-start": "npx @hashgraph/hedera-local start --limits=false --dev=true --turbo=true",
     "hedera-stop": "npx @hashgraph/hedera-local stop",
     "hardhat-start": "npx hardhat node"
