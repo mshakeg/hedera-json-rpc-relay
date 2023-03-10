@@ -33,7 +33,7 @@ describe('Investigate behaviour of contract deletion', function() {
       const closeRc = await closeTx.wait();
 
       doesDeletableExist = await deletableFactory.doesDeletableExist(deletableAddress);
-      expect(doesDeletableExist).to.be.eq(false);
+      expect(doesDeletableExist).to.be.eq(false, "doesDeletableExist not reset to false");
     });
 
     it(`iteration: ${i}; should be able to delete deletable2 and re-create it`, async function() {
