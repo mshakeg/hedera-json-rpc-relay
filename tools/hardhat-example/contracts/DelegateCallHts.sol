@@ -1,7 +1,8 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-// this file is more or less identical to ./DelegateCall.sol; however has the calls to the hts precompile
+// this file is more or less identical to ./DelegateCall.sol; however has delegatecalls to the hts precompile
+// https://github.com/hashgraph/hedera-services/tree/v0.34.5 disallows delegatecalls to the precompile
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -55,7 +56,6 @@ contract RouterHts is ICallerHts, HederaTokenService {
     }
 
     function normalWithdraw(address token, uint64 amount) external {
-        isNormalDeposit = true;
         CoreHts(coreAddress).withdraw(msg.sender, token, amount);
     }
 

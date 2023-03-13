@@ -73,6 +73,7 @@
     "test:ssm:local": "npx hardhat --network h_local test test/silly-small-contract.test.ts",
     "test:dc": "npx hardhat test test/delegate-call.test.ts",
     "test:dch:local": "npx hardhat --network h_local test test/delegate-call-hts.test.ts",
+    "test:dce": "npx hardhat test test/delegate-call-erc20.test.ts",
     "hedera-start": "npx @hashgraph/hedera-local start --limits=false --dev=true --turbo=true",
     "hedera-stop": "npx @hashgraph/hedera-local stop",
     "hardhat-start": "npx hardhat node"
