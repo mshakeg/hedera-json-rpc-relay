@@ -75,7 +75,12 @@ contract Precompile {
 
 contract Core {
     function core() external {
-		console.log('in Core#core; this is %s', address(this)); /// @dev this changes not !Core.address if delegatecall??
+
+		/// @dev this changes not !Core.address if delegatecall??
+		///      instead address(this) if delegatecall will be the contract that executed the delegatecall i.e. the contract that would normally be the msg.sender
+		///      in this case address(this) would be the Router address
+		console.log('in Core#core; this is %s', address(this));
+
         console.log('in Core#core; origin is %s', tx.origin);
         console.log('in Core#core; sender is %s', msg.sender);
 
