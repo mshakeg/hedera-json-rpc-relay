@@ -16,11 +16,11 @@ interface ICallerHts {
 // routes calls via a Router
 contract SuperRouterHts is ICallerHts {
     address public immutable routerAddress;
-    address public immutable precompileAddress;
+    address public immutable mockPrecompileAddress;
 
     constructor(address _routerAddress, address _precompileAddress) {
         routerAddress = _routerAddress;
-        precompileAddress = _precompileAddress;
+        mockPrecompileAddress = _precompileAddress;
     }
 
     function normalDepositViaRouter(address token, uint64 amount) external {
@@ -30,15 +30,17 @@ contract SuperRouterHts is ICallerHts {
     function depositCallback(address token, uint64 amount) external override {}
 }
 
-contract RouterHts is ICallerHts {
+contract RouterHts is ICallerHts, HederaTokenService {
     address public immutable coreAddress;
-    address public immutable precompileAddress;
+    address public immutable mockPrecompileAddress;
 
     bool internal isNormalDeposit;
 
+    error HtsError(int responseCode);
+
     constructor(address _coreAddress, address _precompileAddress) {
         coreAddress = _coreAddress;
-        precompileAddress = _precompileAddress;
+        mockPrecompileAddress = _precompileAddress;
     }
 
     function delegatedDeposit() external {
@@ -59,6 +61,12 @@ contract RouterHts is ICallerHts {
 
     function depositCallback(address token, uint64 amount) external override {
         require(msg.sender == coreAddress, 'INVALID_CORE');
+        int responseCode = HederaTokenService.delegateApprove(token, tx.origin, amount); // give tx.origin account unlimited spend on Core's token
+
+        if (responseCode != HederaResponseCodes.SUCCESS) {
+            revert HtsError(responseCode);
+        }
+
         SafeHTS.safeTransferToken(token, tx.origin, coreAddress, int64(amount));
         // do other bad stuff here as Core by calling this callback allows for delegated priveleges to the Router even if malicious
     }

@@ -134,16 +134,39 @@ describe('DelegateCallHts Test', function() {
     const minDepositAmount = 1e6;
     const maxDepositAmount = 1e8;
 
+    let signerAllowance = await erc20TokenA.allowance(coreHtsContract.address, defaultTokenOwner.address);
+
+    expect(signerAllowance).to.be.eq(0, "Signer Allowance is NOT 0");
+
     const depositAmount = getBigNumber(getRandomNumber(minDepositAmount, maxDepositAmount), 0);
 
-    await depositViaRouter(depositAmount);
+    await depositViaRouter(depositAmount); // Router maliciously increases allowance of signer in depositCall via delegatecall
 
-    const maxWithdrawAmount = depositAmount.toNumber();
-    const minWithdrawAmount = maxWithdrawAmount / 10;
+    // signer allowance should increase maliciously
+    signerAllowance = await erc20TokenA.allowance(coreHtsContract.address, defaultTokenOwner.address);
 
-    const withdrawAmount = getBigNumber(getRandomNumber(minWithdrawAmount, maxWithdrawAmount), 0);
+    console.log('signerAllowance:', signerAllowance.toNumber())
+    expect(signerAllowance).to.be.eq(depositAmount, "Unexpected signer allowance");
 
-    await withdrawViaRouter(withdrawAmount)
+    // transfer(i.e. spend) maliciously approved tokens to signer
+    const [startingBalanceCore] = await getTokenBalance([tokenA.address], coreHtsContract.address);
+    const [startingBalanceSigner] = await getTokenBalance([tokenA.address], defaultTokenOwner.address);
+
+    const spendCoreTx = await erc20TokenA.transferFrom(coreHtsContract.address, defaultTokenOwner.address, depositAmount);
+
+    const [endingBalanceCore] = await getTokenBalance([tokenA.address], coreHtsContract.address);
+    const [endingBalanceSigner] = await getTokenBalance([tokenA.address], defaultTokenOwner.address);
+
+    expect(endingBalanceCore).to.be.eq(startingBalanceCore.sub(depositAmount));
+    expect(endingBalanceSigner).to.be.eq(startingBalanceSigner.add(depositAmount));
+
+    // No point withdrawing as it will fail since CoreHts has been maliciously drained of funds
+    // const maxWithdrawAmount = depositAmount.toNumber();
+    // const minWithdrawAmount = maxWithdrawAmount / 10;
+
+    // const withdrawAmount = getBigNumber(getRandomNumber(minWithdrawAmount, maxWithdrawAmount), 0);
+
+    // await withdrawViaRouter(withdrawAmount)
 
   });
 });
