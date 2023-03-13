@@ -7,7 +7,7 @@ import { utils } from "@hashgraph/hethers";
 import { AccountId, PrivateKey, Client } from "@hashgraph/sdk";
 
 import { SdkAccounts } from "./accounts";
-import { Network } from "./networks";
+import { HederaNetwork } from "./networks";
 
 export async function getHederaDeployAddress(contract: Contract): Promise<string> {
   return (await contract.deployTransaction.wait()).contractAddress;
@@ -138,7 +138,7 @@ export const getNetworkCreds = (): {
   accountId: string;
   privateKey: string;
 } => {
-  const network = hre.network.name as Network;
+  const network = hre.network.name as HederaNetwork;
 
   const { accountId, privateKey } = SdkAccounts[network];
 
@@ -151,7 +151,7 @@ export const getNetworkCreds = (): {
 export const getOperator = (
   _accountId?: string,
   _privateKey?: string,
-  network?: Network
+  network?: HederaNetwork
 ): { accountId: AccountId; privateKey: PrivateKey } => {
   let accountId!: string;
   let privateKey!: string;

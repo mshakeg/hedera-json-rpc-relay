@@ -18,49 +18,132 @@
  *
  */
 
-import {ethers} from 'hardhat';
+import { expect } from 'chai';
+import { BigNumber } from 'ethers';
+import {ethers, network} from 'hardhat';
 
 import {
+  Associator,
+  HERC20Util,
+  HERC20Util__factory,
+  ERC20__factory,
+  CoreHts,
+  RouterHts,
+  Associator__factory,
+  CoreHts__factory,
   RouterHts__factory,
-  PrecompileHts__factory,
-  SuperRouterHts__factory
 } from '../types';
 
-import {
-  deployOverrides
-} from './utils';
+import { transferToken } from './api/core';
+import { balanceOf } from './api/core/balances';
+import { ADDRESS_ZERO, defaultOverrides, getBigNumber, getRandomNumber } from './utils';
+import { HERC20 } from './utils/herc20';
+import { HederaNetworks, HederaNetwork } from './utils/networks';
 
-describe('DelegateCall Test', function() {
+describe('DelegateCallHts Test', function() {
 
-  it('show logs', async function() {
-    const CoreHts = await ethers.getContractFactory('CoreHts');
-    const coreHts = await CoreHts.deploy(deployOverrides);
-    await coreHts.deployed();
+  it('should be able to deposit and withdraw for CoreHts and do malicious stuff', async function () {
 
-    const PrecompileHts = (await ethers.getContractFactory('PrecompileHts')) as PrecompileHts__factory;
-    const precompileHts = await PrecompileHts.deploy(deployOverrides);
-    await precompileHts.deployed();
+    if (!HederaNetworks.includes(network.name as HederaNetwork)) {
+      // hedera precompile contracts aren't functional on the hardhat local node
+      this.skip();
+    }
 
-    const RouterHts = (await ethers.getContractFactory('RouterHts')) as RouterHts__factory;
-    const routerHts = await RouterHts.deploy(coreHts.address, precompileHts.address, deployOverrides);
-    await routerHts.deployed();
+    const ERC20Factory = (await ethers.getContractFactory('ERC20')) as ERC20__factory;
 
-    const SuperRouter = (await ethers.getContractFactory('SuperRouter')) as SuperRouterHts__factory;
-    const superRouter = await SuperRouter.deploy(routerHts.address, precompileHts.address, deployOverrides);
-    await superRouter.deployed();
+    const AssociatorFactory = (await ethers.getContractFactory("Associator")) as Associator__factory;
+    const associatorContract: Associator = (await AssociatorFactory.deploy({ gasLimit: 5_000_000 })) as Associator;
+    await associatorContract.deployed();
 
-    console.log('-- core.address:', coreHts.address);
-    console.log('-- precompile.address:', precompileHts.address);
-    console.log('-- router.address:', routerHts.address);
+    const CoreHtsContractFactory = (await ethers.getContractFactory("CoreHts")) as CoreHts__factory;
+    const coreHtsContract: CoreHts = (await CoreHtsContractFactory.deploy({ gasLimit: 5_000_000 })) as CoreHts;
+    await coreHtsContract.deployed();
 
-    // const routeTx = await router.route();
-    const routeTx = await routerHts.normalRoute();
+    const RouterHtsContractFactory = (await ethers.getContractFactory("RouterHts")) as RouterHts__factory;
+    const routerHtsContract: RouterHts = (await RouterHtsContractFactory.deploy(coreHtsContract.address, ADDRESS_ZERO, { gasLimit: 5_000_000 })) as RouterHts;
+    await routerHtsContract.deployed();
 
-    console.log('-- done router.normalRoute() --');
+    const totalSupply = getBigNumber(10_000_000);
 
-    const superRouteTx = await superRouter.routeViaRouter();
+    const [tokenA] = await Promise.all([
+      HERC20.deploy("TokenA", "TOKA", totalSupply)
+    ] as Promise<HERC20>[]);
 
-    console.log('-- done superRouter.routeViaRouter() --');
+    const erc20TokenA = ERC20Factory.attach(tokenA.address);
+
+    await coreHtsContract.associate(tokenA.address, defaultOverrides);
+
+    const isAassociatedWithTokenA = await coreHtsContract.isAssociated(tokenA.address);
+
+    expect(isAassociatedWithTokenA).to.be.eq(true, "SimpleVault is not associated with tokenA");
+
+    async function associateToken(tokenAddress: string) {
+      const assTx = await associatorContract.associateSender(tokenAddress, defaultOverrides);
+      assTx.wait();
+    }
+
+    await associateToken(tokenA.address);
+
+    const accounts = await ethers.getSigners();
+    const defaultTokenOwner = accounts[0];
+
+    await transferToken(defaultTokenOwner.address, tokenA.address, totalSupply.toNumber());
+
+    const HERC20UtilFactory: HERC20Util__factory = await ethers.getContractFactory("HERC20Util");
+    const hERC20UtilContract: HERC20Util = (await HERC20UtilFactory.deploy({ gasLimit: 5_000_000 })) as HERC20Util;
+    await hERC20UtilContract.deployed();
+
+    async function getTokenBalance(tokens: string[], address: string) {
+      const promisesB: Promise<BigNumber>[] = [];
+      for (let token of tokens) {
+        promisesB.push(balanceOf(token, address));
+      }
+      const balances = await Promise.all(promisesB);
+
+      return balances;
+    }
+
+    async function depositViaRouter(amount: BigNumber) {
+
+      const [startingBalanceCore] = await getTokenBalance([tokenA.address], coreHtsContract.address);
+      const [startingBalanceSigner] = await getTokenBalance([tokenA.address], defaultTokenOwner.address);
+
+      const depositTx = await routerHtsContract.normalDeposit(tokenA.address, amount, defaultOverrides);
+
+      const [endingBalanceCore] = await getTokenBalance([tokenA.address], coreHtsContract.address);
+      const [endingBalanceSigner] = await getTokenBalance([tokenA.address], defaultTokenOwner.address);
+
+      expect(endingBalanceCore).to.be.eq(startingBalanceCore.add(amount));
+      expect(endingBalanceSigner).to.be.eq(startingBalanceSigner.sub(amount));
+    }
+
+    async function withdrawViaRouter(amount: BigNumber) {
+
+      const [startingBalanceCore] = await getTokenBalance([tokenA.address], coreHtsContract.address);
+      const [startingBalanceSigner] = await getTokenBalance([tokenA.address], defaultTokenOwner.address);
+
+      const withdrawTx = await routerHtsContract.normalWithdraw(tokenA.address, amount, defaultOverrides);
+
+      const [endingBalanceCore] = await getTokenBalance([tokenA.address], coreHtsContract.address);
+      const [endingBalanceSigner] = await getTokenBalance([tokenA.address], defaultTokenOwner.address);
+
+      expect(endingBalanceCore).to.be.eq(startingBalanceCore.sub(amount));
+      expect(endingBalanceSigner).to.be.eq(startingBalanceSigner.add(amount));
+    }
+
+    const minDepositAmount = 1e6;
+    const maxDepositAmount = 1e8;
+
+    const depositAmount = getBigNumber(getRandomNumber(minDepositAmount, maxDepositAmount), 0);
+
+    await depositViaRouter(depositAmount);
+
+    const maxWithdrawAmount = depositAmount.toNumber();
+    const minWithdrawAmount = maxWithdrawAmount / 10;
+
+    const withdrawAmount = getBigNumber(getRandomNumber(minWithdrawAmount, maxWithdrawAmount), 0);
+
+    await withdrawViaRouter(withdrawAmount)
 
   });
 });
