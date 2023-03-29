@@ -541,7 +541,7 @@ library SafeHTS {
 
     modifier nonEmptyExpiry(IHederaTokenService.HederaToken memory token) {
         if (token.expiry.second == 0 && token.expiry.autoRenewPeriod == 0) {
-            token.expiry.autoRenewPeriod = defaultAutoRenewPeriod;
+            token.expiry.autoRenewPeriod = int64(uint64(defaultAutoRenewPeriod));
         }
         _;
     }

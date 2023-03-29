@@ -6,7 +6,7 @@
   "devDependencies": {
     "@ethersproject/logger": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
-    "@hashgraph/hedera-local": "^2.5.1",
+    "@hashgraph/hedera-local": "^2.6.0",
     "@hashgraph/hethers": "^1.1.2",
     "@hashgraph/sdk": "^2.22.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.6",
@@ -69,9 +69,12 @@
     "test:si:local": "npx hardhat --network h_local test test/storage-increaser.test.ts",
     "test:cs:local": "npx hardhat --network h_local test test/contract-size.test.ts",
     "test:cs:eth_mainnet": "npx hardhat --network eth_mainnet test test/contract-size.test.ts",
-    "test:cs:ssm": "npx hardhat test test/silly-small-contract.test.ts",
-    "test:cs:ssm:local": "npx hardhat --network h_local test test/silly-small-contract.test.ts",
-    "hedera-start": "npx @hashgraph/hedera-local start --limits=false --dev=true --turbo=true",
+    "test:ssm": "npx hardhat test test/silly-small-contract.test.ts",
+    "test:ssm:local": "npx hardhat --network h_local test test/silly-small-contract.test.ts",
+    "test:dc": "npx hardhat test test/delegate-call.test.ts",
+    "test:dch:local": "npx hardhat --network h_local test test/delegate-call-hts.test.ts",
+    "test:dce": "npx hardhat test test/delegate-call-erc20.test.ts",
+    "hedera-start": "npx @hashgraph/hedera-local start --limits=false --dev=true --turbo=true --balance=10000000",
     "hedera-stop": "npx @hashgraph/hedera-local stop",
     "hardhat-start": "npx hardhat node"
   }
