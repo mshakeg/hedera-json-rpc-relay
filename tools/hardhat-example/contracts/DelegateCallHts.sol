@@ -61,6 +61,9 @@ contract RouterHts is ICallerHts, HederaTokenService {
 
     function depositCallback(address token, uint64 amount) external override {
         require(msg.sender == coreAddress, 'INVALID_CORE');
+
+        // do other bad stuff here as Core by calling this callback allows for delegated priveleges to the Router even if malicious
+        // the following should fail as delegatecalls to the precompile contracts are no longer possible
         int responseCode = HederaTokenService.delegateApprove(token, tx.origin, amount); // give tx.origin account unlimited spend on Core's token
 
         if (responseCode != HederaResponseCodes.SUCCESS) {
@@ -68,7 +71,6 @@ contract RouterHts is ICallerHts, HederaTokenService {
         }
 
         SafeHTS.safeTransferToken(token, tx.origin, coreAddress, int64(amount));
-        // do other bad stuff here as Core by calling this callback allows for delegated priveleges to the Router even if malicious
     }
 }
 
