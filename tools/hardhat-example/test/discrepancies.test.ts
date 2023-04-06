@@ -120,7 +120,7 @@ describe('Demo discrepancies between hardhat and hedera local node', function() 
     expect(rcs[0].transactionHash).to.not.eq(rcs[1].transactionHash, "txs have same hashes");
   });
 
-  it('should be able to deposit and withdraw from vault repeatedly and get correct balances', async function () {
+  it.only('should be able to deposit and withdraw from vault repeatedly and get correct balances', async function () {
 
     if (network.name === Networks.hardhat_local) {
       // hedera precompile contracts aren't functional on the hardhat local node
@@ -174,34 +174,56 @@ describe('Demo discrepancies between hardhat and hedera local node', function() 
     const hERC20UtilContract: HERC20Util = (await HERC20UtilFactory.deploy({ gasLimit: 5_000_000 })) as HERC20Util;
     await hERC20UtilContract.deployed();
 
-    async function getTokenBalances(address: string): Promise<Array<BigNumber>> {
-      const balanceTokenA = erc20TokenA.balanceOf(address);
-      const balanceTokenB = erc20TokenB.balanceOf(address);
+    // async function getTokenBalances(address: string): Promise<Array<BigNumber>> {
+    //   const balanceTokenA = erc20TokenA.balanceOf(address);
+    //   const balanceTokenB = erc20TokenB.balanceOf(address);
+    //
+    //   return Promise.all([
+    //     balanceTokenA,
+    //     balanceTokenB
+    //   ]);
+    // }
+    //
+    // async function getTokenBalance(tokens: string[], address: string) {
+    //   const promisesA: Promise<BigNumber>[] = [];
+    //   const promisesB: Promise<BigNumber>[] = [];
+    //   for (let token of tokens) {
+    //     promisesA.push(hERC20UtilContract.balanceOf(token, address));
+    //     promisesB.push(balanceOf(token, address));
+    //   }
+    //   const A = await Promise.all(promisesA);
+    //   const B = await Promise.all(promisesB);
+    //
+    //   for (let index in A) {
+    //     const balanceA = A[index];
+    //     const balanceB = B[index];
+    //
+    //     // for some reason the balance returned by the HERC20Util is not correct; but the balance returned via the @hashgraph/sdk is correct; hence why B and NOT A is returned
+    //     if (!balanceA.eq(balanceB)) {
+    //       console.log("balance Core !== balance HERC20Util");
+    //     }
+    //   }
+    //
+    //   return B;
+    // }
 
-      return Promise.all([
-        balanceTokenA,
-        balanceTokenB
-      ]);
+    async function getTokenBalances(address: string): Promise<Array<BigNumber>> {
+      const balanceTokenA = await erc20TokenA.balanceOf(address);
+      const balanceTokenB = await erc20TokenB.balanceOf(address);
+
+      return [balanceTokenA, balanceTokenB];
     }
 
     async function getTokenBalance(tokens: string[], address: string) {
-      const promisesA: Promise<BigNumber>[] = [];
-      const promisesB: Promise<BigNumber>[] = [];
+      const B = [];
       for (let token of tokens) {
-        promisesA.push(hERC20UtilContract.balanceOf(token, address));
-        promisesB.push(balanceOf(token, address));
-      }
-      const A = await Promise.all(promisesA);
-      const B = await Promise.all(promisesB);
-
-      for (let index in A) {
-        const balanceA = A[index];
-        const balanceB = B[index];
-
-        // for some reason the balance returned by the HERC20Util is not correct; but the balance returned via the @hashgraph/sdk is correct; hence why B and NOT A is returned
-        if (!balanceA.eq(balanceB)) {
-          console.log("balance Core !== balance HERC20Util");
+        const balance1 = await hERC20UtilContract.balanceOf(token, address);
+        const balance2 = await balanceOf(token, address);
+        if (!balance1.eq(balance2)) {
+          console.log('balance Core !== balance HERC20Util');
         }
+
+        B.push(balance2);
       }
 
       return B;
