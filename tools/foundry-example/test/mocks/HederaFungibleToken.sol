@@ -7,10 +7,29 @@ import 'hedera-smart-contracts/hts-precompile/HederaResponseCodes.sol';
 import 'hedera-smart-contracts/hts-precompile/IHederaTokenService.sol';
 import 'hedera-smart-contracts/hts-precompile/KeyHelper.sol';
 
+// TODO: create a tighter coupling between instances of HederaFungibleToken and the HtsPrecompileMock contract
+//       such that if a HederaFungibleToken contract is created directly it's registered with the HtsPrecompileMock contract
+//       and if an action is attempted directly via the HederaFungibleToken contract it first goes through the HtsPrecompileMock contract
+//       and if an action goes through the HtsPrecompileMock contract then it ultimately calls the HederaFungibleToken contract
+//       HederaFungibleToken contract should store state related to ERC20 and do validation related to ERC20
+//       HtsPrecompileMock contract should store extra state related to the HTS and do validation related to HTS business logic
+//       HederaFungibleToken contract should expose special methods only callable by the precompile contract
+//       Doing it like this would remove the need for the {grant|revoke}HtsPrecompilePermissions flow
+
 contract HederaFungibleToken is ERC20, KeyHelper {
+
+    address internal HTS_PRECOMPILE = address(0x167);
+
     IHederaTokenService.FungibleTokenInfo public fungibleTokenInfo;
     // key -> value e.g. 1 -> 0x123 means that the ADMIN is account 0x123
-    mapping(uint => address) internal tokenKeys;
+    mapping(uint => address) internal _tokenKeys;
+
+    /// @dev if the HtsPrecompile(0x167) calls a HederaFungibleToken and if address has granted the precompile permissions then allow the precompile to execute HTS actions
+    ///      In tests you should grant and revoke actions to the HTS Precompile immediately before and immediately after the main action; i.e. only grant permissions as required
+    mapping(address => bool) public htsPrecompileCallPermissions;
+
+    // account -> isAssociated with this token i.e. address(this)
+    mapping(address => bool) public isAssociated;
 
     constructor(
         IHederaTokenService.FungibleTokenInfo memory _fungibleTokenInfo
@@ -39,7 +58,7 @@ contract HederaFungibleToken is ERC20, KeyHelper {
 
             /// @dev contractId can in fact be any address including an EOA address
             ///      The KeyHelper lists 5 types for KeyValueType; however only CONTRACT_ID is considered
-            tokenKeys[tokenKey.keyType] = tokenKey.key.contractId;
+            _tokenKeys[tokenKey.keyType] = tokenKey.key.contractId;
         }
 
         fungibleTokenInfo.tokenInfo.token.expiry.second = _fungibleTokenInfo.tokenInfo.token.expiry.second;
@@ -63,6 +82,14 @@ contract HederaFungibleToken is ERC20, KeyHelper {
 
         fungibleTokenInfo.tokenInfo.ledgerId = _fungibleTokenInfo.tokenInfo.ledgerId;
         fungibleTokenInfo.decimals = _fungibleTokenInfo.decimals;
+    }
+
+    function _isAccountOriginOrSenderOrPermittedHtsPrecompile(address account) internal view returns (bool) {
+        return _isAccountOriginOrSender(account) || _isPermittedHtsPrecompile(account);
+    }
+
+    function _isPermittedHtsPrecompile(address account) internal view returns (bool) {
+        return htsPrecompileCallPermissions[account] && msg.sender == HTS_PRECOMPILE;
     }
 
     function _isAccountOriginOrSender(address account) internal view returns (bool) {
@@ -109,17 +136,41 @@ contract HederaFungibleToken is ERC20, KeyHelper {
         return _isAccountOriginOrSender(getKey(KeyHelper.KeyType.PAUSE));
     }
 
-    // public/external state-changing functions
-    function transfer(address recipient, uint256 amount) public override returns (bool) {
-        return super.transfer(recipient, amount);
+    // public/external state-changing functions:
+
+    // TODO: only allow the contract deployer or master account to call this function
+    function grantHtsPrecompilePermissions(address account) external {
+        htsPrecompileCallPermissions[account] = true;
+        _approve(account, HTS_PRECOMPILE, type(uint).max);
+    }
+
+    // TODO: only allow the contract deployer or master account to call this function
+    function revokeHtsPrecompilePermissions(address account) external {
+        htsPrecompileCallPermissions[account] = false;
+        _approve(account, HTS_PRECOMPILE, 0);
     }
 
     function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
         return super.transferFrom(sender, recipient, amount);
     }
 
-    // public/external view functions
+    function associate(address account) public returns (int64 responseCode) {
+        if (_isAccountOriginOrSenderOrPermittedHtsPrecompile(account)) {
+
+            if (isAssociated[account]) {
+                isAssociated[account] = true;
+                responseCode = HederaResponseCodes.SUCCESS;
+            } else {
+                responseCode = HederaResponseCodes.TOKEN_ALREADY_ASSOCIATED_TO_ACCOUNT;
+            }
+
+        } else {
+            responseCode = HederaResponseCodes.INVALID_SIGNATURE;
+        }
+    }
+
+    // public/external view functions:
     function getKey(KeyHelper.KeyType keyType) public view returns (address keyOwner) {
-        keyOwner = tokenKeys[keyTypes[keyType]];
+        keyOwner = _tokenKeys[keyTypes[keyType]];
     }
 }

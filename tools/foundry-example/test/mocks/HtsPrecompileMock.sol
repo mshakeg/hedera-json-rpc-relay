@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import 'hedera-smart-contracts/hts-precompile/HederaResponseCodes.sol';
 import 'hedera-smart-contracts/hts-precompile/IHederaTokenService.sol';
 
-contract PrecompileHtsMock is IHederaTokenService {
+contract HtsPrecompileMock is IHederaTokenService {
     // /// @dev only for Fungible tokens
     // mapping(address => bool) internal _isFungible;
     // // Fungible token -> owner -> spender -> allowance
