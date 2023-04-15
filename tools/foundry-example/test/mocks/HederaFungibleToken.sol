@@ -18,7 +18,6 @@ import './HtsPrecompileMock.sol';
 //       Doing it like this would remove the need for the {grant|revoke}HtsPrecompilePermissions flow
 
 contract HederaFungibleToken is ERC20, KeyHelper {
-
     address internal constant HTS_PRECOMPILE = address(0x167);
     HtsPrecompileMock internal constant HtsPrecompile = HtsPrecompileMock(HTS_PRECOMPILE);
 
@@ -35,29 +34,41 @@ contract HederaFungibleToken is ERC20, KeyHelper {
     /// @dev the HtsPrecompileMock should do precheck validation before calling any function with this modifier
     ///      the HtsPrecompileMock has priveleged access to do certain operations
     modifier onlyHtsPrecompile() {
-        require(msg.sender == HTS_PRECOMPILE, "NOT_HTS_PRECOMPILE");
+        require(msg.sender == HTS_PRECOMPILE, 'NOT_HTS_PRECOMPILE');
     }
 
     // public/external state-changing functions:
     // onlyHtsPrecompile functions:
     /// @dev mints "amount" to treasury
     function mintRequestFromHtsPrecompile(int64 amount) external onlyHtsPrecompile {
-
+        (, IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo) = HtsPrecompile.getFungibleTokenInfo(
+            address(this)
+        );
+        address treasury = fungibleTokenInfo.tokenInfo.token.treasury;
+        _mint(treasury, uint64(amount));
     }
 
     /// @dev burns "amount" from treasury
     function burnRequestFromHtsPrecompile(int64 amount) external onlyHtsPrecompile {
-
+        (, IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo) = HtsPrecompile.getFungibleTokenInfo(
+            address(this)
+        );
+        address treasury = fungibleTokenInfo.tokenInfo.token.treasury;
+        _burn(treasury, uint64(amount));
     }
 
     /// @dev transfers "amount" from "from" to "to"
     function transferRequestFromHtsPrecompile(address from, address to, uint256 amount) external onlyHtsPrecompile {
-
+        _transfer(from, to, amount);
     }
 
     /// @dev gives "spender" an allowance of "amount" for "account"
-    function approveRequestFromHtsPrecompile(address account, address spender, uint256 amount) external onlyHtsPrecompile {
-
+    function approveRequestFromHtsPrecompile(
+        address account,
+        address spender,
+        uint256 amount
+    ) external onlyHtsPrecompile {
+        _approve(account, spender, amount);
     }
 
     // standard ERC20 functions overriden for HtsPrecompileMock prechecks:
