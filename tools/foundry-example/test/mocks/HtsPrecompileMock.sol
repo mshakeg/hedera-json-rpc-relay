@@ -11,9 +11,9 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
 
     /// @dev only for Fungible tokens
     // Fungible token -> FungibleTokenInfo
-    mapping(address => IHederaTokenService.FungibleTokenInfo) internal _fungibleTokenInfos;
+    mapping(address => FungibleTokenInfo) internal _fungibleTokenInfos;
     // Fungible token -> keyType -> value e.g. 1 -> 0x123 means that the ADMIN is account 0x123
-    mapping(address => mapping(uint => address)) internal _tokenKeys;
+    mapping(address => mapping(uint => address)) internal _tokenKeys; /// @dev faster access then getting keys via FungibleTokenInfo#TokenInfo.HederaToken.tokenKeys[]; however only supports KeyValueType.CONTRACT_ID
     // Fungible token -> _isFungible
     mapping(address => bool) internal _isFungible;
 
@@ -23,7 +23,7 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
     // // NFT token -> owner -> spender -> serialNumber -> isAllowed
     // mapping(address => mapping(address => mapping(address => mapping(uint256 => bool)))) internal _nftAllowances;
     // // NFT token -> NonFungibleTokenInfo
-    // mapping(address => IHederaTokenService.NonFungibleTokenInfo) internal _nonFungibleTokenInfos;
+    // mapping(address => NonFungibleTokenInfo) internal _nonFungibleTokenInfos;
 
     /// @dev common to both NFT and Fungible HTS tokens
     // HTS token -> account -> isAssociated
@@ -98,7 +98,7 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
     }
 
     function _setFungibleTokenInfo(
-        IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo
+        FungibleTokenInfo memory fungibleTokenInfo
     ) internal returns (address treasury) {
         _fungibleTokenInfos[msg.sender].tokenInfo.token.name = fungibleTokenInfo.tokenInfo.token.name;
         _fungibleTokenInfos[msg.sender].tokenInfo.token.symbol = fungibleTokenInfo.tokenInfo.token.symbol;
@@ -117,7 +117,7 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
         // Copy the tokenKeys array
         uint256 length = fungibleTokenInfo.tokenInfo.token.tokenKeys.length;
         for (uint256 i = 0; i < length; i++) {
-            IHederaTokenService.TokenKey memory tokenKey = fungibleTokenInfo.tokenInfo.token.tokenKeys[i];
+            TokenKey memory tokenKey = fungibleTokenInfo.tokenInfo.token.tokenKeys[i];
             _fungibleTokenInfos[msg.sender].tokenInfo.token.tokenKeys.push(tokenKey);
 
             /// @dev contractId can in fact be any address including an EOA address
@@ -150,21 +150,24 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
 
     /// @dev register HederaFungibleToken; msg.sender is the HederaFungibleToken
     ///      can be called by any contract; however assumes msg.sender is a HederaFungibleToken
-    function registerHederaFungibleToken(IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo) external {
+    function registerHederaFungibleToken(FungibleTokenInfo memory fungibleTokenInfo) external {
+        _isFungible[msg.sender] = true;
         _setFungibleTokenInfo(fungibleTokenInfo);
     }
 
     /// @dev register HederaNonFungibleToken; msg.sender is the HederaNonFungibleToken
     ///      can be called by any contract; however assumes msg.sender is a HederaNonFungibleToken
     function registerHederaNonFungibleToken(
-        IHederaTokenService.NonFungibleTokenInfo memory nonFungibleTokenInfo
+        NonFungibleTokenInfo memory nonFungibleTokenInfo
     ) external {}
 
     // IHederaTokenService public/external view functions:
     function getApproved(
         address token,
         uint256 serialNumber
-    ) external view returns (int64 responseCode, address approved) {}
+    ) external view returns (int64 responseCode, address approved) {
+        // TODO: NonFungibleToken
+    }
 
     function getFungibleTokenInfo(
         address token
@@ -349,17 +352,27 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
         HederaToken memory token,
         int64 initialTotalSupply,
         int32 decimals
-    ) external payable returns (int64 responseCode, address tokenAddress) {}
+    ) external payable returns (int64 responseCode, address tokenAddress) {
+        // TODO: do precheck validation on token
+        FungibleTokenInfo memory fungibleTokenInfo;
+        TokenInfo memory tokenInfo;
+
+        tokenInfo.token = token;
+        tokenInfo.totalSupply = initialTotalSupply;
+
+        fungibleTokenInfo.decimals = decimals;
+        fungibleTokenInfo.tokenInfo = tokenInfo;
+
+        /// @dev no need to register newly created HederaFungibleToken in this context as the constructor will call HtsPrecompileMock#registerHederaFungibleToken
+        HederaFungibleToken hederaFungibleToken = new HederaFungibleToken(fungibleTokenInfo);
+    }
 
     function createNonFungibleToken(
         HederaToken memory token
-    ) external payable returns (int64 responseCode, address tokenAddress) {}
-
-    function createNonFungibleTokenWithCustomFees(
-        HederaToken memory token,
-        FixedFee[] memory fixedFees,
-        RoyaltyFee[] memory royaltyFees
-    ) external payable returns (int64 responseCode, address tokenAddress) {}
+    ) external payable returns (int64 responseCode, address tokenAddress) {
+        // TODO: NonFungibleToken
+        // TODO: do validation on token
+    }
 
     function createFungibleTokenWithCustomFees(
         HederaToken memory token,
@@ -367,7 +380,17 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
         int32 decimals,
         FixedFee[] memory fixedFees,
         FractionalFee[] memory fractionalFees
-    ) external payable returns (int64 responseCode, address tokenAddress) {}
+    ) external payable returns (int64 responseCode, address tokenAddress) {
+        // TODO: do validation on token
+    }
+
+    function createNonFungibleTokenWithCustomFees(
+        HederaToken memory token,
+        FixedFee[] memory fixedFees,
+        RoyaltyFee[] memory royaltyFees
+    ) external payable returns (int64 responseCode, address tokenAddress) {
+        // TODO: NonFungibleToken
+    }
 
     function cryptoTransfer(
         TransferList memory transferList,
@@ -388,6 +411,7 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
     }
 
     function approveNFT(address token, address approved, uint256 serialNumber) external returns (int64 responseCode) {
+        // TODO: NonFungibleToken
         // if (!_isNonFungible[token]) {
         //     responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
         // } else if (!_association[token][msg.sender] || !_association[token][approved]) {
@@ -491,21 +515,27 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
         address from,
         address to,
         uint256 serialNumber
-    ) external returns (int64 responseCode) {}
+    ) external returns (int64 responseCode) {
+        // TODO: NonFungibleToken
+    }
 
     function transferNFT(
         address token,
         address sender,
         address recipient,
         int64 serialNumber
-    ) external returns (int64 responseCode) {}
+    ) external returns (int64 responseCode) {
+        // TODO: NonFungibleToken
+    }
 
     function transferNFTs(
         address token,
         address[] memory sender,
         address[] memory receiver,
         int64[] memory serialNumber
-    ) external returns (int64 responseCode) {}
+    ) external returns (int64 responseCode) {
+        // TODO: NonFungibleToken
+    }
 
     function transferToken(
         address token,
@@ -536,7 +566,9 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
         address token,
         address account,
         int64[] memory serialNumbers
-    ) external returns (int64 responseCode) {}
+    ) external returns (int64 responseCode) {
+        // TODO: NonFungibleToken
+    }
 
     function redirectForToken(address token, bytes memory encodedFunctionSelector) external {}
 
