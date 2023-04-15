@@ -12,7 +12,7 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
     /// @dev only for Fungible tokens
     // Fungible token -> FungibleTokenInfo
     mapping(address => IHederaTokenService.FungibleTokenInfo) public fungibleTokenInfo;
-    // Fungible token -> key -> value e.g. 1 -> 0x123 means that the ADMIN is account 0x123
+    // Fungible token -> keyType -> value e.g. 1 -> 0x123 means that the ADMIN is account 0x123
     mapping(address => mapping(uint => address)) internal _tokenKeys;
     // Fungible token -> _isFungible
     mapping(address => bool) internal _isFungible;
@@ -41,6 +41,10 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
     mapping(address => mapping(address => bool)) internal _kyc;
     // HTS token -> account -> isFrozen
     mapping(address => mapping(address => bool)) internal _frozen;
+
+    function _isToken(address token) internal view returns (bool) {
+        return _isFungible[token] || _isNonFungible[token];
+    }
 
     function _isAccountOriginOrSender(address account) internal view returns (bool) {
         return _isAccountOrigin(account) || _isAccountSender(msg.sender);
@@ -201,20 +205,66 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
         address token
     ) external view returns (int64 responseCode, bool defaultKycStatus) {}
 
-    function getTokenExpiryInfo(address token) external view returns (int64 responseCode, Expiry memory expiry) {}
+    function getTokenExpiryInfo(address token) external view returns (int64 responseCode, Expiry memory expiry) {
+        if (!_isToken(token)) {
+            responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
+        } else {
+            if (_isFungible[token]) {
+                expiry = fungibleTokenInfo[token].tokenInfo.token.expiry;
+                responseCode = HederaResponseCodes.SUCCESS;
+            } else {
+                // TODO: NonFungibleToken
+            }
+        }
+    }
 
-    function getTokenInfo(address token) external view returns (int64 responseCode, TokenInfo memory tokenInfo) {}
+    function getTokenInfo(address token) external view returns (int64 responseCode, TokenInfo memory tokenInfo) {
+        if (!_isToken(token)) {
+            responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
+        } else {
+            if (_isFungible[token]) {
+                tokenInfo = fungibleTokenInfo[token].tokenInfo;
+                responseCode = HederaResponseCodes.SUCCESS;
+            } else {
+                // TODO: NonFungibleToken
+            }
+        }
+    }
 
-    function getTokenKey(address token, uint keyType) external view returns (int64 responseCode, KeyValue memory key) {}
+    function getTokenKey(address token, uint keyType) external view returns (int64 responseCode, KeyValue memory key) {
+        if (!_isToken(token)) {
+            responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
+        } else {
+            if (_isFungible[token]) {
+                /// @dev the key can be retrieved using either of the following method
+                // method 1: gas inefficient
+                // uint256 length = fungibleTokenInfo[token].tokenInfo.token.tokenKeys.length;
+                // for (uint256 i = 0; i < length; i++) {
+                //     IHederaTokenService.TokenKey memory tokenKey = fungibleTokenInfo[token].tokenInfo.token.tokenKeys[i];
+                //     if (tokenKey.keyType == keyType) {
+                //         key = tokenKey.key;
+                //         break;
+                //     }
+                // }
+
+                // method 2: more gas efficient; however currently only considers contractId
+                address keyValue = _tokenKeys[token][keyType];
+                key.contractId = keyValue;
+                responseCode = HederaResponseCodes.SUCCESS;
+            } else {
+                // TODO: NonFungibleToken
+            }
+        }
+    }
 
     function getTokenType(address token) external view returns (int64 responseCode, int32 tokenType) {
         bool isFungibleToken = _isFungible[token];
         bool isNonFungibleToken = _isNonFungible[token];
         if (!isFungibleToken && !isNonFungibleToken) {
             responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
+        } else {
+            tokenType = isFungibleToken ? int8(0) : int8(1);
         }
-
-        tokenType = isFungibleToken ? int8(0) : int8(1);
     }
 
     function grantTokenKyc(address token, address account) external returns (int64 responseCode) {
@@ -265,13 +315,9 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
         }
     }
 
-    function isToken(address token) external view returns (int64 responseCode, bool isToken) {
-        if (!_isFungible[token] && !_isNonFungible[token]) {
-            responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
-        } else {
-            responseCode = HederaResponseCodes.SUCCESS;
-            isToken = true;
-        }
+    function isToken(address token) public view returns (int64 responseCode, bool isToken) {
+        isToken = _isToken(token);
+        responseCode = isToken ? HederaResponseCodes.SUCCESS : HederaResponseCodes.INVALID_TOKEN_ID;
     }
 
     function allowance(
