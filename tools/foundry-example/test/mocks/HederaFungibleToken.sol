@@ -19,7 +19,9 @@ import 'hedera-smart-contracts/hts-precompile/KeyHelper.sol';
 contract HederaFungibleToken is ERC20, KeyHelper {
 
     address internal HTS_PRECOMPILE = address(0x167);
+    bool public constant IS_FUNGIBLE = true; /// @dev if HederaNonFungibleToken then false
 
+    // remove the following
     IHederaTokenService.FungibleTokenInfo public fungibleTokenInfo;
     // key -> value e.g. 1 -> 0x123 means that the ADMIN is account 0x123
     mapping(uint => address) internal _tokenKeys;
