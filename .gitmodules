@@ -4,3 +4,6 @@
 [submodule "tools/foundry-example/lib/openzeppelin-contracts"]
 	path = tools/foundry-example/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "tools/foundry-example/lib/hedera-smart-contracts"]
+	path = tools/foundry-example/lib/hedera-smart-contracts
+	url = https://github.com/hashgraph/hedera-smart-contracts
