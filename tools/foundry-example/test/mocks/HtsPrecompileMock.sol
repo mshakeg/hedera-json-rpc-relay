@@ -3,8 +3,7 @@ pragma solidity ^0.8.13;
 
 import 'hedera-smart-contracts/hts-precompile/HederaResponseCodes.sol';
 import 'hedera-smart-contracts/hts-precompile/IHederaTokenService.sol';
-import '../utils/KeyHelper.sol';
-// import 'hedera-smart-contracts/hts-precompile/KeyHelper.sol';
+import 'hedera-smart-contracts/hts-precompile/KeyHelper.sol';
 
 contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
     /// @dev only for Fungible tokens
@@ -47,7 +46,9 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
         return account == msg.sender;
     }
 
-    function _setFungibleTokenInfo(IHederaTokenService.FungibleTokenInfo memory _fungibleTokenInfo) internal returns (address treasury) {
+    function _setFungibleTokenInfo(
+        IHederaTokenService.FungibleTokenInfo memory _fungibleTokenInfo
+    ) internal returns (address treasury) {
         fungibleTokenInfo[msg.sender].tokenInfo.token.name = _fungibleTokenInfo.tokenInfo.token.name;
         fungibleTokenInfo[msg.sender].tokenInfo.token.symbol = _fungibleTokenInfo.tokenInfo.token.symbol;
         fungibleTokenInfo[msg.sender].tokenInfo.token.treasury = _fungibleTokenInfo.tokenInfo.token.treasury;
@@ -55,7 +56,10 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
         treasury = _fungibleTokenInfo.tokenInfo.token.treasury;
 
         fungibleTokenInfo[msg.sender].tokenInfo.token.memo = _fungibleTokenInfo.tokenInfo.token.memo;
-        fungibleTokenInfo[msg.sender].tokenInfo.token.tokenSupplyType = _fungibleTokenInfo.tokenInfo.token.tokenSupplyType;
+        fungibleTokenInfo[msg.sender].tokenInfo.token.tokenSupplyType = _fungibleTokenInfo
+            .tokenInfo
+            .token
+            .tokenSupplyType;
         fungibleTokenInfo[msg.sender].tokenInfo.token.maxSupply = _fungibleTokenInfo.tokenInfo.token.maxSupply;
         fungibleTokenInfo[msg.sender].tokenInfo.token.freezeDefault = _fungibleTokenInfo.tokenInfo.token.freezeDefault;
 
@@ -95,16 +99,19 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
 
     /// @dev register HederaFungibleToken; msg.sender is the HederaFungibleToken
     ///      can be called by any contract; however assumes msg.sender is a HederaFungibleToken
-    function registerHederaFungibleToken(IHederaTokenService.FungibleTokenInfo memory _fungibleTokenInfo) external {
-
-    }
+    function registerHederaFungibleToken(IHederaTokenService.FungibleTokenInfo memory _fungibleTokenInfo) external {}
 
     /// @dev register HederaNonFungibleToken; msg.sender is the HederaNonFungibleToken
     ///      can be called by any contract; however assumes msg.sender is a HederaNonFungibleToken
-    function registerHederaNonFungibleToken(IHederaTokenService.NonFungibleTokenInfo memory _nonFungibleTokenInfo) external {}
+    function registerHederaNonFungibleToken(
+        IHederaTokenService.NonFungibleTokenInfo memory _nonFungibleTokenInfo
+    ) external {}
 
     // IHederaTokenService public/external view functions:
-    function getApproved(address token, uint256 serialNumber) external view returns (int64 responseCode, address approved) {}
+    function getApproved(
+        address token,
+        uint256 serialNumber
+    ) external view returns (int64 responseCode, address approved) {}
 
     function getFungibleTokenInfo(
         address token
@@ -118,7 +125,8 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
     function getTokenCustomFees(
         address token
     )
-        external view
+        external
+        view
         returns (
             int64 responseCode,
             FixedFee[] memory fixedFees,
@@ -131,7 +139,9 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
         address token
     ) external view returns (int64 responseCode, bool defaultFreezeStatus) {}
 
-    function getTokenDefaultKycStatus(address token) external view returns (int64 responseCode, bool defaultKycStatus) {}
+    function getTokenDefaultKycStatus(
+        address token
+    ) external view returns (int64 responseCode, bool defaultKycStatus) {}
 
     function getTokenExpiryInfo(address token) external view returns (int64 responseCode, Expiry memory expiry) {}
 
@@ -176,8 +186,8 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
     // IHederaTokenService public/external state-changing functions:
     function createFungibleToken(
         HederaToken memory token,
-        uint64 initialTotalSupply,
-        uint32 decimals
+        int64 initialTotalSupply,
+        int32 decimals
     ) external payable returns (int64 responseCode, address tokenAddress) {}
 
     function createNonFungibleToken(
@@ -192,13 +202,16 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
 
     function createFungibleTokenWithCustomFees(
         HederaToken memory token,
-        uint64 initialTotalSupply,
-        uint32 decimals,
+        int64 initialTotalSupply,
+        int32 decimals,
         FixedFee[] memory fixedFees,
         FractionalFee[] memory fractionalFees
     ) external payable returns (int64 responseCode, address tokenAddress) {}
 
-    function cryptoTransfer(TokenTransferList[] memory tokenTransfers) external returns (int64 responseCode) {}
+    function cryptoTransfer(
+        TransferList memory transferList,
+        TokenTransferList[] memory tokenTransfers
+    ) external returns (int64 responseCode) {}
 
     function deleteToken(address token) external returns (int64 responseCode) {}
 
@@ -255,15 +268,15 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
 
     function mintToken(
         address token,
-        uint64 amount,
+        int64 amount,
         bytes[] memory metadata
-    ) external returns (int64 responseCode, uint64 newTotalSupply, int64[] memory serialNumbers) {}
+    ) external returns (int64 responseCode, int64 newTotalSupply, int64[] memory serialNumbers) {}
 
     function burnToken(
         address token,
-        uint64 amount,
+        int64 amount,
         int64[] memory serialNumbers
-    ) external returns (int64 responseCode, uint64 newTotalSupply) {
+    ) external returns (int64 responseCode, int64 newTotalSupply) {
         // if (_isFungible[token]) {
         //     FungibleTokenInfo memory fungibleTokenInfo = _fungibleTokenInfo[token];
         //     TokenInfo memory tokenInfo = fungibleTokenInfo.token;
@@ -335,15 +348,9 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
 
     function updateTokenInfo(address token, HederaToken memory tokenInfo) external returns (int64 responseCode) {}
 
-    function updateTokenKeys(address token, TokenKey[] memory keys)
-        external
-        returns (int64 responseCode) {}
+    function updateTokenKeys(address token, TokenKey[] memory keys) external returns (int64 responseCode) {}
 
-    function wipeTokenAccount(
-        address token,
-        address account,
-        uint32 amount
-    ) external returns (int64 responseCode) {}
+    function wipeTokenAccount(address token, address account, int64 amount) external returns (int64 responseCode) {}
 
     function wipeTokenAccountNFT(
         address token,
@@ -351,6 +358,7 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
         int64[] memory serialNumbers
     ) external returns (int64 responseCode) {}
 
-    // Additional(not in IHederaTokenService) public/external state-changing functions:
+    function redirectForToken(address token, bytes memory encodedFunctionSelector) external {}
 
+    // Additional(not in IHederaTokenService) public/external state-changing functions:
 }

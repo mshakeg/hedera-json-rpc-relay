@@ -37,7 +37,7 @@ contract HederaFungibleToken is ERC20, KeyHelper {
         IHederaTokenService.FungibleTokenInfo memory _fungibleTokenInfo
     ) ERC20(_fungibleTokenInfo.tokenInfo.token.name, _fungibleTokenInfo.tokenInfo.token.symbol) {
         address treasury = _setFungibleTokenInfo(_fungibleTokenInfo);
-        _mint(treasury, _fungibleTokenInfo.tokenInfo.totalSupply);
+        _mint(treasury, uint(uint64(_fungibleTokenInfo.tokenInfo.totalSupply)));
     }
 
     function _setFungibleTokenInfo(IHederaTokenService.FungibleTokenInfo memory _fungibleTokenInfo) internal returns (address treasury) {
