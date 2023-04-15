@@ -11,28 +11,19 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
 
     /// @dev only for Fungible tokens
     // Fungible token -> FungibleTokenInfo
-    mapping(address => IHederaTokenService.FungibleTokenInfo) public fungibleTokenInfo;
+    mapping(address => IHederaTokenService.FungibleTokenInfo) internal _fungibleTokenInfos;
     // Fungible token -> keyType -> value e.g. 1 -> 0x123 means that the ADMIN is account 0x123
     mapping(address => mapping(uint => address)) internal _tokenKeys;
     // Fungible token -> _isFungible
     mapping(address => bool) internal _isFungible;
 
-    // // Fungible token -> owner -> spender -> allowance
-    // mapping(address => mapping(address => mapping(address => uint256))) internal _allowances;
-    // // Fungible token -> FungibleTokenInfo
-    // mapping(address => FungibleTokenInfo) _fungibleTokenInfo;
-    // // Fungible token -> account -> balance
-    // mapping(address => mapping(address => uint256)) _fungibleBalance;
-
-    /// @dev only for NFT tokens
+    /// @dev only for NonFungibleToken
     // NFT token -> _isNonFungible
     mapping(address => bool) internal _isNonFungible;
     // // NFT token -> owner -> spender -> serialNumber -> isAllowed
     // mapping(address => mapping(address => mapping(address => mapping(uint256 => bool)))) internal _nftAllowances;
     // // NFT token -> NonFungibleTokenInfo
-    // mapping(address => NonFungibleTokenInfo) _nonFungibleTokenInfo;
-    // // NFT token -> account -> serialNumber -> exists
-    // mapping(address => mapping(address => uint256)) _nftBalance;
+    // mapping(address => IHederaTokenService.NonFungibleTokenInfo) internal _nonFungibleTokenInfos;
 
     /// @dev common to both NFT and Fungible HTS tokens
     // HTS token -> account -> isAssociated
@@ -59,7 +50,7 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
     }
 
     function _hasTreasurySig(address token) internal view returns (bool validKey, bool noKey) {
-        address key = fungibleTokenInfo[token].tokenInfo.token.treasury;
+        address key = _fungibleTokenInfos[token].tokenInfo.token.treasury;
         noKey = key == ADDRESS_ZERO;
         validKey = _isAccountOriginOrSender(key);
     }
@@ -107,66 +98,66 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
     }
 
     function _setFungibleTokenInfo(
-        IHederaTokenService.FungibleTokenInfo memory _fungibleTokenInfo
+        IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo
     ) internal returns (address treasury) {
-        fungibleTokenInfo[msg.sender].tokenInfo.token.name = _fungibleTokenInfo.tokenInfo.token.name;
-        fungibleTokenInfo[msg.sender].tokenInfo.token.symbol = _fungibleTokenInfo.tokenInfo.token.symbol;
-        fungibleTokenInfo[msg.sender].tokenInfo.token.treasury = _fungibleTokenInfo.tokenInfo.token.treasury;
+        _fungibleTokenInfos[msg.sender].tokenInfo.token.name = fungibleTokenInfo.tokenInfo.token.name;
+        _fungibleTokenInfos[msg.sender].tokenInfo.token.symbol = fungibleTokenInfo.tokenInfo.token.symbol;
+        _fungibleTokenInfos[msg.sender].tokenInfo.token.treasury = fungibleTokenInfo.tokenInfo.token.treasury;
 
-        treasury = _fungibleTokenInfo.tokenInfo.token.treasury;
+        treasury = fungibleTokenInfo.tokenInfo.token.treasury;
 
-        fungibleTokenInfo[msg.sender].tokenInfo.token.memo = _fungibleTokenInfo.tokenInfo.token.memo;
-        fungibleTokenInfo[msg.sender].tokenInfo.token.tokenSupplyType = _fungibleTokenInfo
+        _fungibleTokenInfos[msg.sender].tokenInfo.token.memo = fungibleTokenInfo.tokenInfo.token.memo;
+        _fungibleTokenInfos[msg.sender].tokenInfo.token.tokenSupplyType = fungibleTokenInfo
             .tokenInfo
             .token
             .tokenSupplyType;
-        fungibleTokenInfo[msg.sender].tokenInfo.token.maxSupply = _fungibleTokenInfo.tokenInfo.token.maxSupply;
-        fungibleTokenInfo[msg.sender].tokenInfo.token.freezeDefault = _fungibleTokenInfo.tokenInfo.token.freezeDefault;
+        _fungibleTokenInfos[msg.sender].tokenInfo.token.maxSupply = fungibleTokenInfo.tokenInfo.token.maxSupply;
+        _fungibleTokenInfos[msg.sender].tokenInfo.token.freezeDefault = fungibleTokenInfo.tokenInfo.token.freezeDefault;
 
         // Copy the tokenKeys array
-        uint256 length = _fungibleTokenInfo.tokenInfo.token.tokenKeys.length;
+        uint256 length = fungibleTokenInfo.tokenInfo.token.tokenKeys.length;
         for (uint256 i = 0; i < length; i++) {
-            IHederaTokenService.TokenKey memory tokenKey = _fungibleTokenInfo.tokenInfo.token.tokenKeys[i];
-            fungibleTokenInfo[msg.sender].tokenInfo.token.tokenKeys.push(tokenKey);
+            IHederaTokenService.TokenKey memory tokenKey = fungibleTokenInfo.tokenInfo.token.tokenKeys[i];
+            _fungibleTokenInfos[msg.sender].tokenInfo.token.tokenKeys.push(tokenKey);
 
             /// @dev contractId can in fact be any address including an EOA address
             ///      The KeyHelper lists 5 types for KeyValueType; however only CONTRACT_ID is considered
             _tokenKeys[msg.sender][tokenKey.keyType] = tokenKey.key.contractId;
         }
 
-        fungibleTokenInfo[msg.sender].tokenInfo.token.expiry.second = _fungibleTokenInfo.tokenInfo.token.expiry.second;
-        fungibleTokenInfo[msg.sender].tokenInfo.token.expiry.autoRenewAccount = _fungibleTokenInfo
+        _fungibleTokenInfos[msg.sender].tokenInfo.token.expiry.second = fungibleTokenInfo.tokenInfo.token.expiry.second;
+        _fungibleTokenInfos[msg.sender].tokenInfo.token.expiry.autoRenewAccount = fungibleTokenInfo
             .tokenInfo
             .token
             .expiry
             .autoRenewAccount;
-        fungibleTokenInfo[msg.sender].tokenInfo.token.expiry.autoRenewPeriod = _fungibleTokenInfo
+        _fungibleTokenInfos[msg.sender].tokenInfo.token.expiry.autoRenewPeriod = fungibleTokenInfo
             .tokenInfo
             .token
             .expiry
             .autoRenewPeriod;
 
-        fungibleTokenInfo[msg.sender].tokenInfo.totalSupply = _fungibleTokenInfo.tokenInfo.totalSupply;
-        fungibleTokenInfo[msg.sender].tokenInfo.deleted = _fungibleTokenInfo.tokenInfo.deleted;
-        fungibleTokenInfo[msg.sender].tokenInfo.defaultKycStatus = _fungibleTokenInfo.tokenInfo.defaultKycStatus;
-        fungibleTokenInfo[msg.sender].tokenInfo.pauseStatus = _fungibleTokenInfo.tokenInfo.pauseStatus;
+        _fungibleTokenInfos[msg.sender].tokenInfo.totalSupply = fungibleTokenInfo.tokenInfo.totalSupply;
+        _fungibleTokenInfos[msg.sender].tokenInfo.deleted = fungibleTokenInfo.tokenInfo.deleted;
+        _fungibleTokenInfos[msg.sender].tokenInfo.defaultKycStatus = fungibleTokenInfo.tokenInfo.defaultKycStatus;
+        _fungibleTokenInfos[msg.sender].tokenInfo.pauseStatus = fungibleTokenInfo.tokenInfo.pauseStatus;
 
         // Handle copying of other arrays (fixedFees, fractionalFees, and royaltyFees) if needed
 
-        fungibleTokenInfo[msg.sender].tokenInfo.ledgerId = _fungibleTokenInfo.tokenInfo.ledgerId;
-        fungibleTokenInfo[msg.sender].decimals = _fungibleTokenInfo.decimals;
+        _fungibleTokenInfos[msg.sender].tokenInfo.ledgerId = fungibleTokenInfo.tokenInfo.ledgerId;
+        _fungibleTokenInfos[msg.sender].decimals = fungibleTokenInfo.decimals;
     }
 
     /// @dev register HederaFungibleToken; msg.sender is the HederaFungibleToken
     ///      can be called by any contract; however assumes msg.sender is a HederaFungibleToken
-    function registerHederaFungibleToken(IHederaTokenService.FungibleTokenInfo memory _fungibleTokenInfo) external {
-        _setFungibleTokenInfo(_fungibleTokenInfo);
+    function registerHederaFungibleToken(IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo) external {
+        _setFungibleTokenInfo(fungibleTokenInfo);
     }
 
     /// @dev register HederaNonFungibleToken; msg.sender is the HederaNonFungibleToken
     ///      can be called by any contract; however assumes msg.sender is a HederaNonFungibleToken
     function registerHederaNonFungibleToken(
-        IHederaTokenService.NonFungibleTokenInfo memory _nonFungibleTokenInfo
+        IHederaTokenService.NonFungibleTokenInfo memory nonFungibleTokenInfo
     ) external {}
 
     // IHederaTokenService public/external view functions:
@@ -177,12 +168,16 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
 
     function getFungibleTokenInfo(
         address token
-    ) external view returns (int64 responseCode, FungibleTokenInfo memory fungibleTokenInfo) {}
+    ) external view returns (int64 responseCode, FungibleTokenInfo memory fungibleTokenInfo) {
+        fungibleTokenInfo = _fungibleTokenInfos[token];
+    }
 
     function getNonFungibleTokenInfo(
         address token,
         int64 serialNumber
-    ) external view returns (int64 responseCode, NonFungibleTokenInfo memory nonFungibleTokenInfo) {}
+    ) external view returns (int64 responseCode, NonFungibleTokenInfo memory nonFungibleTokenInfo) {
+        // TODO: NonFungibleToken
+    }
 
     function getTokenCustomFees(
         address token
@@ -195,22 +190,33 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
             FractionalFee[] memory fractionalFees,
             RoyaltyFee[] memory royaltyFees
         )
-    {}
+    {
+        responseCode = HederaResponseCodes.SUCCESS;
+        fixedFees = _fungibleTokenInfos[token].tokenInfo.fixedFees;
+        fractionalFees = _fungibleTokenInfos[token].tokenInfo.fractionalFees;
+        royaltyFees = _fungibleTokenInfos[token].tokenInfo.royaltyFees;
+    }
 
     function getTokenDefaultFreezeStatus(
         address token
-    ) external view returns (int64 responseCode, bool defaultFreezeStatus) {}
+    ) external view returns (int64 responseCode, bool defaultFreezeStatus) {
+        responseCode = HederaResponseCodes.SUCCESS;
+        defaultFreezeStatus = _fungibleTokenInfos[token].tokenInfo.token.freezeDefault;
+    }
 
     function getTokenDefaultKycStatus(
         address token
-    ) external view returns (int64 responseCode, bool defaultKycStatus) {}
+    ) external view returns (int64 responseCode, bool defaultKycStatus) {
+        responseCode = HederaResponseCodes.SUCCESS;
+        defaultKycStatus = _fungibleTokenInfos[token].tokenInfo.defaultKycStatus;
+    }
 
     function getTokenExpiryInfo(address token) external view returns (int64 responseCode, Expiry memory expiry) {
         if (!_isToken(token)) {
             responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
         } else {
             if (_isFungible[token]) {
-                expiry = fungibleTokenInfo[token].tokenInfo.token.expiry;
+                expiry = _fungibleTokenInfos[token].tokenInfo.token.expiry;
                 responseCode = HederaResponseCodes.SUCCESS;
             } else {
                 // TODO: NonFungibleToken
@@ -223,7 +229,7 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
             responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
         } else {
             if (_isFungible[token]) {
-                tokenInfo = fungibleTokenInfo[token].tokenInfo;
+                tokenInfo = _fungibleTokenInfos[token].tokenInfo;
                 responseCode = HederaResponseCodes.SUCCESS;
             } else {
                 // TODO: NonFungibleToken
@@ -238,9 +244,9 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
             if (_isFungible[token]) {
                 /// @dev the key can be retrieved using either of the following method
                 // method 1: gas inefficient
-                // uint256 length = fungibleTokenInfo[token].tokenInfo.token.tokenKeys.length;
+                // uint256 length = _fungibleTokenInfos[token].tokenInfo.token.tokenKeys.length;
                 // for (uint256 i = 0; i < length; i++) {
-                //     IHederaTokenService.TokenKey memory tokenKey = fungibleTokenInfo[token].tokenInfo.token.tokenKeys[i];
+                //     IHederaTokenService.TokenKey memory tokenKey = _fungibleTokenInfos[token].tokenInfo.token.tokenKeys[i];
                 //     if (tokenKey.keyType == keyType) {
                 //         key = tokenKey.key;
                 //         break;
@@ -452,7 +458,7 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
         int64[] memory serialNumbers
     ) external returns (int64 responseCode, int64 newTotalSupply) {
         // if (_isFungible[token]) {
-        //     FungibleTokenInfo memory fungibleTokenInfo = _fungibleTokenInfo[token];
+        //     FungibleTokenInfo memory fungibleTokenInfo = _fungibleTokenInfos[token];
         //     TokenInfo memory tokenInfo = fungibleTokenInfo.token;
         //     address treasury = tokenInfo.treasury;
         //     if (!_isOriginOrSender(treasury)) {
@@ -461,7 +467,7 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
         //         responseCode = HederaResponseCodes.SUCCESS;
         //     }
         // } else if (_isNonFungible[token]) {
-        //     NonFungibleTokenInfo memory nonFungibleTokenInfo = _nonFungibleTokenInfo[token];
+        //     NonFungibleTokenInfo memory nonFungibleTokenInfo = _nonFungibleTokenInfos[token];
         // } else {
         //     responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
         // }
