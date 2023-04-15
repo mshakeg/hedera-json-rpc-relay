@@ -33,6 +33,10 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
     // HTS token -> account -> isFrozen
     mapping(address => mapping(address => bool)) internal _frozen;
 
+    modifier onlyHederaToken() {
+        require(_isToken(msg.sender), "NOT_HEDERA_TOKEN");
+    }
+
     function _isToken(address token) internal view returns (bool) {
         return _isFungible[token] || _isNonFungible[token];
     }
@@ -146,6 +150,42 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
 
         _fungibleTokenInfos[msg.sender].tokenInfo.ledgerId = fungibleTokenInfo.tokenInfo.ledgerId;
         _fungibleTokenInfos[msg.sender].decimals = fungibleTokenInfo.decimals;
+    }
+
+    /// @dev the following internal _precheck functions are called in either of the following 2 scenarios:
+    ///      1. before the HtsPrecompileMock calls any of the HederaFungibleToken or HederaNonFungibleToken functions that specify the onlyHtsPrecompile modifier
+    ///      2. in any of HtsPrecompileMock functions that specifies the onlyHederaToken modifier which is only callable by a HederaFungibleToken or HederaNonFungibleToken contract
+
+    function _precheckApprove() internal {
+
+    }
+
+    function _precheckMint() internal {
+
+    }
+
+    function _precheckBurn() internal {
+
+    }
+
+    function _precheckTransfer() internal {
+
+    }
+
+    function preApprove() external onlyHederaToken {
+
+    }
+
+    function preMint() external onlyHederaToken {
+
+    }
+
+    function preBurn() external onlyHederaToken {
+
+    }
+
+    function preTransfer() external onlyHederaToken {
+
     }
 
     /// @dev register HederaFungibleToken; msg.sender is the HederaFungibleToken
@@ -382,6 +422,19 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
         FractionalFee[] memory fractionalFees
     ) external payable returns (int64 responseCode, address tokenAddress) {
         // TODO: do validation on token
+        FungibleTokenInfo memory fungibleTokenInfo;
+        TokenInfo memory tokenInfo;
+
+        tokenInfo.token = token;
+        tokenInfo.totalSupply = initialTotalSupply;
+        tokenInfo.fixedFees = fixedFees;
+        tokenInfo.fractionalFees = fractionalFees;
+
+        fungibleTokenInfo.decimals = decimals;
+        fungibleTokenInfo.tokenInfo = tokenInfo;
+
+        /// @dev no need to register newly created HederaFungibleToken in this context as the constructor will call HtsPrecompileMock#registerHederaFungibleToken
+        HederaFungibleToken hederaFungibleToken = new HederaFungibleToken(fungibleTokenInfo);
     }
 
     function createNonFungibleTokenWithCustomFees(
@@ -474,7 +527,9 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
         address token,
         int64 amount,
         bytes[] memory metadata
-    ) external returns (int64 responseCode, int64 newTotalSupply, int64[] memory serialNumbers) {}
+    ) external returns (int64 responseCode, int64 newTotalSupply, int64[] memory serialNumbers) {
+
+    }
 
     function burnToken(
         address token,
