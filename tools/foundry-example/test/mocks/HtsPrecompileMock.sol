@@ -11,8 +11,8 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
     mapping(address => IHederaTokenService.FungibleTokenInfo) public fungibleTokenInfo;
     // Fungible token -> key -> value e.g. 1 -> 0x123 means that the ADMIN is account 0x123
     mapping(address => mapping(uint => address)) internal _tokenKeys;
-
-    // mapping(address => bool) internal _isFungible;
+    // Fungible token -> _isFungible
+    mapping(address => bool) internal _isFungible;
 
     // // Fungible token -> owner -> spender -> allowance
     // mapping(address => mapping(address => mapping(address => uint256))) internal _allowances;
@@ -22,7 +22,8 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
     // mapping(address => mapping(address => uint256)) _fungibleBalance;
 
     /// @dev only for NFT tokens
-    // mapping(address => bool) internal _isNFT;
+    // NFT token -> _isNonFungible
+    mapping(address => bool) internal _isNonFungible;
     // // NFT token -> owner -> spender -> serialNumber -> isAllowed
     // mapping(address => mapping(address => mapping(address => mapping(uint256 => bool)))) internal _nftAllowances;
     // // NFT token -> NonFungibleTokenInfo
@@ -31,8 +32,8 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
     // mapping(address => mapping(address => uint256)) _nftBalance;
 
     /// @dev common to both NFT and Fungible HTS tokens
-    // // HTS token -> account -> isAssociated
-    // mapping(address => mapping(address => bool)) internal _associations;
+    // HTS token -> account -> isAssociated
+    mapping(address => mapping(address => bool)) internal _associations;
 
     function _isOriginOrSender(address account) internal returns (bool) {
         return _isOrigin(account) || _isSender(msg.sender);
@@ -99,7 +100,9 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
 
     /// @dev register HederaFungibleToken; msg.sender is the HederaFungibleToken
     ///      can be called by any contract; however assumes msg.sender is a HederaFungibleToken
-    function registerHederaFungibleToken(IHederaTokenService.FungibleTokenInfo memory _fungibleTokenInfo) external {}
+    function registerHederaFungibleToken(IHederaTokenService.FungibleTokenInfo memory _fungibleTokenInfo) external {
+        _setFungibleTokenInfo(_fungibleTokenInfo);
+    }
 
     /// @dev register HederaNonFungibleToken; msg.sender is the HederaNonFungibleToken
     ///      can be called by any contract; however assumes msg.sender is a HederaNonFungibleToken
@@ -227,7 +230,7 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
     }
 
     function approveNFT(address token, address approved, uint256 serialNumber) external returns (int64 responseCode) {
-        // if (!_isNFT[token]) {
+        // if (!_isNonFungible[token]) {
         //     responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
         // } else if (!_associations[token][msg.sender] || !_associations[token][approved]) {
         //     responseCode = HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT;
@@ -238,31 +241,50 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
     }
 
     function associateToken(address account, address token) public returns (int64 responseCode) {
-        // if (!_isFungible[token] && !_isNFT[token]) {
-        //     responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
-        // } else if (_associations[account][token]) {
-        //     responseCode = HederaResponseCodes.TOKEN_ALREADY_ASSOCIATED_TO_ACCOUNT;
-        // } else {
-        //     responseCode = HederaResponseCodes.SUCCESS;
-        //     _associations[account][token] = true;
-        // }
+        if (!_isFungible[token] && !_isNonFungible[token]) {
+            responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
+        } else if (_associations[account][token]) {
+            responseCode = HederaResponseCodes.TOKEN_ALREADY_ASSOCIATED_TO_ACCOUNT;
+        } else {
+            responseCode = HederaResponseCodes.SUCCESS;
+            _associations[account][token] = true;
+        }
     }
 
     function associateTokens(address account, address[] memory tokens) external returns (int64 responseCode) {
-        // responseCode = HederaResponseCodes.SUCCESS;
-        // for (uint256 i = 0; i < tokens.length; i++) {
-        //     int64 tokenResponseCode = associateToken(account, tokens[i]);
-        //     if (tokenResponseCode != HederaResponseCodes.SUCCESS) {
-        //         responseCode = tokenResponseCode;
-        //         break;
-        //     }
-        // }
-        // return responseCode;
+        responseCode = HederaResponseCodes.SUCCESS;
+        for (uint256 i = 0; i < tokens.length; i++) {
+            int64 tokenResponseCode = associateToken(account, tokens[i]);
+            if (tokenResponseCode != HederaResponseCodes.SUCCESS) {
+                responseCode = tokenResponseCode;
+                break;
+            }
+        }
+        return responseCode;
     }
 
-    function dissociateTokens(address account, address[] memory tokens) external returns (int64 responseCode) {}
+    function dissociateTokens(address account, address[] memory tokens) external returns (int64 responseCode) {
+        responseCode = HederaResponseCodes.SUCCESS;
+        for (uint256 i = 0; i < tokens.length; i++) {
+            int64 tokenResponseCode = dissociateToken(account, tokens[i]);
+            if (tokenResponseCode != HederaResponseCodes.SUCCESS) {
+                responseCode = tokenResponseCode;
+                break;
+            }
+        }
+        return responseCode;
+    }
 
-    function dissociateToken(address account, address token) external returns (int64 responseCode) {}
+    function dissociateToken(address account, address token) public returns (int64 responseCode) {
+        if (!_isFungible[token] && !_isNonFungible[token]) {
+            responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
+        } else if (!_associations[account][token]) {
+            responseCode = HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT;
+        } else {
+            responseCode = HederaResponseCodes.SUCCESS;
+            _associations[account][token] = false;
+        }
+    }
 
     function freezeToken(address token, address account) external returns (int64 responseCode) {}
 
@@ -286,7 +308,7 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
         //     } else {
         //         responseCode = HederaResponseCodes.SUCCESS;
         //     }
-        // } else if (_isNFT[token]) {
+        // } else if (_isNonFungible[token]) {
         //     NonFungibleTokenInfo memory nonFungibleTokenInfo = _nonFungibleTokenInfo[token];
         // } else {
         //     responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
