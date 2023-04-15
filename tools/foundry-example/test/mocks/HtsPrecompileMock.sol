@@ -7,7 +7,6 @@ import 'hedera-smart-contracts/hts-precompile/KeyHelper.sol';
 import './HederaFungibleToken.sol';
 
 contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
-
     address constant ADDRESS_ZERO = address(0);
 
     /// @dev only for Fungible tokens
@@ -55,36 +54,52 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
         return account == msg.sender;
     }
 
-    function _hasTreasurySig(address token) internal view returns (bool) {
-        return _isAccountOriginOrSender(fungibleTokenInfo[token].tokenInfo.token.treasury);
+    function _hasTreasurySig(address token) internal view returns (bool validKey, bool noKey) {
+        address key = fungibleTokenInfo[token].tokenInfo.token.treasury;
+        noKey = key == ADDRESS_ZERO;
+        validKey = _isAccountOriginOrSender(key);
     }
 
-    function _hasAdminKeySig(address token) internal view returns (bool) {
-        return _isAccountOriginOrSender(getKey(token, KeyHelper.KeyType.ADMIN));
+    function _hasAdminKeySig(address token) internal view returns (bool validKey, bool noKey) {
+        address key = getKey(token, KeyHelper.KeyType.ADMIN);
+        noKey = key == ADDRESS_ZERO;
+        validKey = _isAccountOriginOrSender(key);
     }
 
-    function _hasKycKeySig(address token) internal view returns (bool) {
-        return _isAccountOriginOrSender(getKey(token, KeyHelper.KeyType.KYC));
+    function _hasKycKeySig(address token) internal view returns (bool validKey, bool noKey) {
+        address key = getKey(token, KeyHelper.KeyType.KYC);
+        noKey = key == ADDRESS_ZERO;
+        validKey = _isAccountOriginOrSender(key);
     }
 
-    function _hasFreezeKeySig(address token) internal view returns (bool) {
-        return _isAccountOriginOrSender(getKey(token, KeyHelper.KeyType.FREEZE));
+    function _hasFreezeKeySig(address token) internal view returns (bool validKey, bool noKey) {
+        address key = getKey(token, KeyHelper.KeyType.FREEZE);
+        noKey = key == ADDRESS_ZERO;
+        validKey = _isAccountOriginOrSender(key);
     }
 
-    function _hasWipeKeySig(address token) internal view returns (bool) {
-        return _isAccountOriginOrSender(getKey(token, KeyHelper.KeyType.WIPE));
+    function _hasWipeKeySig(address token) internal view returns (bool validKey, bool noKey) {
+        address key = getKey(token, KeyHelper.KeyType.WIPE);
+        noKey = key == ADDRESS_ZERO;
+        validKey = _isAccountOriginOrSender(key);
     }
 
-    function _hasSupplyKeySig(address token) internal view returns (bool) {
-        return _isAccountOriginOrSender(getKey(token, KeyHelper.KeyType.SUPPLY));
+    function _hasSupplyKeySig(address token) internal view returns (bool validKey, bool noKey) {
+        address key = getKey(token, KeyHelper.KeyType.SUPPLY);
+        noKey = key == ADDRESS_ZERO;
+        validKey = _isAccountOriginOrSender(key);
     }
 
-    function _hasFeeScheduleKeySig(address token) internal view returns (bool) {
-        return _isAccountOriginOrSender(getKey(token, KeyHelper.KeyType.FEE));
+    function _hasFeeScheduleKeySig(address token) internal view returns (bool validKey, bool noKey) {
+        address key = getKey(token, KeyHelper.KeyType.FEE);
+        noKey = key == ADDRESS_ZERO;
+        validKey = _isAccountOriginOrSender(key);
     }
 
-    function _hasPauseKeySig(address token) internal view returns (bool) {
-        return _isAccountOriginOrSender(getKey(token, KeyHelper.KeyType.PAUSE));
+    function _hasPauseKeySig(address token) internal view returns (bool validKey, bool noKey) {
+        address key = getKey(token, KeyHelper.KeyType.PAUSE);
+        noKey = key == ADDRESS_ZERO;
+        validKey = _isAccountOriginOrSender(key);
     }
 
     function _setFungibleTokenInfo(
@@ -192,11 +207,36 @@ contract HtsPrecompileMock is IHederaTokenService, KeyHelper {
 
     function getTokenKey(address token, uint keyType) external view returns (int64 responseCode, KeyValue memory key) {}
 
-    function getTokenType(address token) external view returns (int64 responseCode, int32 tokenType) {}
+    function getTokenType(address token) external view returns (int64 responseCode, int32 tokenType) {
+        bool isFungibleToken = _isFungible[token];
+        bool isNonFungibleToken = _isNonFungible[token];
+        if (!isFungibleToken && !isNonFungibleToken) {
+            responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
+        }
 
-    function grantTokenKyc(address token, address account) external returns (int64 responseCode) {}
+        tokenType = isFungibleToken ? int8(0) : int8(1);
+    }
 
-    /// @dev Applicable ONLY to NFT Tokens
+    function grantTokenKyc(address token, address account) external returns (int64 responseCode) {
+        if (!_isFungible[token] && !_isNonFungible[token]) {
+            responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
+        } else if (_kyc[token][account]) {
+            responseCode = HederaResponseCodes.SUCCESS; /// @dev if already KYCed return SUCCESS; no code similar to TOKEN_ALREADY_ASSOCIATED_TO_ACCOUNT
+        } else {
+            (bool validKey, bool noKey) = _hasKycKeySig(token);
+
+            if (noKey) {
+                responseCode = HederaResponseCodes.TOKEN_HAS_NO_KYC_KEY;
+            } else if (!validKey) {
+                responseCode = HederaResponseCodes.INVALID_KYC_KEY;
+            } else {
+                responseCode = HederaResponseCodes.SUCCESS;
+                _kyc[token][account] = true;
+            }
+        }
+    }
+
+    /// @dev Applicable ONLY to NFT Tokens; accessible via IERC721
     function isApprovedForAll(
         address token,
         address owner,
