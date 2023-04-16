@@ -19,12 +19,12 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     mapping(address => bool) internal _isFungible;
 
     /// @dev only for NonFungibleToken
-    // NFT token -> _isNonFungible
-    mapping(address => bool) internal _isNonFungible;
+    // // NFT token -> NonFungibleTokenInfo
+    mapping(address => NonFungibleTokenInfo) internal _nonFungibleTokenInfos;
     // // NFT token -> owner -> spender -> serialNumber -> isAllowed
     // mapping(address => mapping(address => mapping(address => mapping(uint256 => bool)))) internal _nftAllowances;
-    // // NFT token -> NonFungibleTokenInfo
-    // mapping(address => NonFungibleTokenInfo) internal _nonFungibleTokenInfos;
+    // NFT token -> _isNonFungible
+    mapping(address => bool) internal _isNonFungible;
 
     /// @dev common to both NFT and Fungible HTS tokens
     // HTS token -> account -> isAssociated
@@ -35,7 +35,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     mapping(address => mapping(address => bool)) internal _frozen;
 
     modifier onlyHederaToken() {
-        require(_isToken(msg.sender), "NOT_HEDERA_TOKEN");
+        require(_isToken(msg.sender), 'NOT_HEDERA_TOKEN');
     }
 
     function _isToken(address token) internal view returns (bool) {
@@ -453,18 +453,26 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
 
     function deleteToken(address token) external noDelegateCall returns (int64 responseCode) {}
 
-    function approve(address token, address spender, uint256 amount) external noDelegateCall returns (int64 responseCode) {
-        // if (!_isFungible[token]) {
-        //     responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
-        // } else if (!_association[token][msg.sender] || !_association[token][spender]) {
-        //     responseCode = HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT;
-        // } else {
-        //     _allowances[token][msg.sender][spender] = amount;
-        //     responseCode = HederaResponseCodes.SUCCESS;
-        // }
+    function approve(
+        address token,
+        address spender,
+        uint256 amount
+    ) external noDelegateCall returns (int64 responseCode) {
+        if (!_isFungible[token]) {
+            responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
+        } else if (!_association[token][msg.sender] || !_association[token][spender]) {
+            responseCode = HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT;
+        } else {
+            HederaFungibleToken(token).approveRequestFromHtsPrecompile(msg.sender, spender, amount);
+            responseCode = HederaResponseCodes.SUCCESS;
+        }
     }
 
-    function approveNFT(address token, address approved, uint256 serialNumber) external noDelegateCall returns (int64 responseCode) {
+    function approveNFT(
+        address token,
+        address approved,
+        uint256 serialNumber
+    ) external noDelegateCall returns (int64 responseCode) {
         // TODO: NonFungibleToken
         // if (!_isNonFungible[token]) {
         //     responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
@@ -487,7 +495,10 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         }
     }
 
-    function associateTokens(address account, address[] memory tokens) external noDelegateCall returns (int64 responseCode) {
+    function associateTokens(
+        address account,
+        address[] memory tokens
+    ) external noDelegateCall returns (int64 responseCode) {
         responseCode = HederaResponseCodes.SUCCESS;
         for (uint256 i = 0; i < tokens.length; i++) {
             int64 tokenResponseCode = associateToken(account, tokens[i]);
@@ -499,7 +510,10 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         return responseCode;
     }
 
-    function dissociateTokens(address account, address[] memory tokens) external noDelegateCall returns (int64 responseCode) {
+    function dissociateTokens(
+        address account,
+        address[] memory tokens
+    ) external noDelegateCall returns (int64 responseCode) {
         responseCode = HederaResponseCodes.SUCCESS;
         for (uint256 i = 0; i < tokens.length; i++) {
             int64 tokenResponseCode = dissociateToken(account, tokens[i]);
@@ -529,7 +543,24 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         int64 amount,
         bytes[] memory metadata
     ) external noDelegateCall returns (int64 responseCode, int64 newTotalSupply, int64[] memory serialNumbers) {
+        bool isFungible = _isFungible[token];
+        bool isNonFungible = _isNonFungible[token];
+        if (isFungible) {
+            (bool validKey, bool noKey) = _hasSupplyKeySig(token);
 
+            if (noKey) {
+                responseCode = HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY;
+            } else if (!validKey) {
+                responseCode = HederaResponseCodes.INVALID_SUPPLY_KEY;
+            } else {
+                HederaFungibleToken(token).mintRequestFromHtsPrecompile(amount);
+                responseCode = HederaResponseCodes.SUCCESS;
+            }
+        } else if (isNonFungible) {
+            // TODO: NonFungibleToken
+        } else {
+            responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
+        }
     }
 
     function burnToken(
@@ -537,27 +568,36 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         int64 amount,
         int64[] memory serialNumbers
     ) external noDelegateCall returns (int64 responseCode, int64 newTotalSupply) {
-        // if (_isFungible[token]) {
-        //     FungibleTokenInfo memory fungibleTokenInfo = _fungibleTokenInfos[token];
-        //     TokenInfo memory tokenInfo = fungibleTokenInfo.token;
-        //     address treasury = tokenInfo.treasury;
-        //     if (!_isOriginOrSender(treasury)) {
-        //     } else if (not sufficient in treasury) {
-        //     } else {
-        //         responseCode = HederaResponseCodes.SUCCESS;
-        //     }
-        // } else if (_isNonFungible[token]) {
-        //     NonFungibleTokenInfo memory nonFungibleTokenInfo = _nonFungibleTokenInfos[token];
-        // } else {
-        //     responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
-        // }
+        bool isFungible = _isFungible[token];
+        bool isNonFungible = _isNonFungible[token];
+
+        if (_isFungible[token]) {
+            (bool validKey, bool noKey) = _hasTreasurySig(token);
+
+            if (noKey || !validKey) { /// @dev noKey should always be false as a token must have a treasury account; however use INVALID_TREASURY_ACCOUNT_FOR_TOKEN if treasury has been deleted
+                responseCode = HederaResponseCodes.AUTHORIZATION_FAILED;
+            } else {
+                HederaFungibleToken(token).burnRequestFromHtsPrecompile(amount);
+                responseCode = HederaResponseCodes.SUCCESS;
+            }
+
+        } else if (_isNonFungible[token]) {
+            // TODO: NonFungibleToken
+            NonFungibleTokenInfo memory nonFungibleTokenInfo = _nonFungibleTokenInfos[token];
+        } else {
+            responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
+        }
     }
 
     function pauseToken(address token) external noDelegateCall returns (int64 responseCode) {}
 
     function revokeTokenKyc(address token, address account) external noDelegateCall returns (int64 responseCode) {}
 
-    function setApprovalForAll(address token, address operator, bool approved) external noDelegateCall returns (int64 responseCode) {}
+    function setApprovalForAll(
+        address token,
+        address operator,
+        bool approved
+    ) external noDelegateCall returns (int64 responseCode) {}
 
     function transferFrom(
         address token,
