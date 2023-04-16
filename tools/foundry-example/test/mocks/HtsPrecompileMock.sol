@@ -34,6 +34,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
 
     modifier onlyHederaToken() {
         require(_isToken(msg.sender), 'NOT_HEDERA_TOKEN');
+        _;
     }
 
     function _isToken(address token) internal view returns (bool) {

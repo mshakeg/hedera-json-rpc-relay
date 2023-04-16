@@ -39,6 +39,7 @@ contract HederaFungibleToken is ERC20, KeyHelper {
     ///      the HtsPrecompileMock has priveleged access to do certain operations
     modifier onlyHtsPrecompile() {
         require(msg.sender == HTS_PRECOMPILE, 'NOT_HTS_PRECOMPILE');
+        _;
     }
 
     // public/external state-changing functions:
