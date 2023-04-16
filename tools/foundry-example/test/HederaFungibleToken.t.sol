@@ -7,6 +7,11 @@ import "./mocks/HtsPrecompileMock.sol";
 
 contract HederaFungibleTokenTest is Test {
 
+    address alice = vm.addr(1);
+    address bob = vm.addr(2);
+    address carol = vm.addr(3);
+    address dave = vm.addr(4);
+
     address constant htsPrecompileAddress = address(0x167);
 
     HtsPrecompileMock htsPrecompile = HtsPrecompileMock(htsPrecompileAddress);
@@ -16,12 +21,19 @@ contract HederaFungibleTokenTest is Test {
         HtsPrecompileMock htsPrecompileMock = new HtsPrecompileMock();
         bytes memory code = address(htsPrecompileMock).code;
         vm.etch(htsPrecompileAddress, code);
+
+        vm.deal(alice, 100 ether);
+        vm.deal(bob, 100 ether);
+        vm.deal(carol, 100 ether);
+        vm.deal(dave, 100 ether);
     }
 
     // positive cases
     function test_CreateHederaFungibleTokenViaHtsPrecompile() public {
+        vm.startPrank(alice);
         (, bool isToken) = htsPrecompile.isToken(address(0x123));
         assertTrue(isToken == false);
+        vm.stopPrank();
     }
 
     function test_CreateHederaFungibleTokenDirectly() public {
