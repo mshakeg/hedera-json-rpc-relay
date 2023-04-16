@@ -18,6 +18,10 @@ import './HtsPrecompileMock.sol';
 //       Doing it like this would remove the need for the {grant|revoke}HtsPrecompilePermissions flow
 
 contract HederaFungibleToken is ERC20, KeyHelper {
+
+    error HtsPrecompileError(int64 responseCode);
+    address constant ADDRESS_ZERO = address(0);
+
     address internal constant HTS_PRECOMPILE = address(0x167);
     HtsPrecompileMock internal constant HtsPrecompile = HtsPrecompileMock(HTS_PRECOMPILE);
 
@@ -72,7 +76,31 @@ contract HederaFungibleToken is ERC20, KeyHelper {
     }
 
     // standard ERC20 functions overriden for HtsPrecompileMock prechecks:
-    function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
-        return super.transferFrom(sender, recipient, amount);
+    function approve(address spender, uint256 amount) public override returns (bool) {
+        int64 responseCode = HtsPrecompile.preApprove(msg.sender, spender, amount);
+        if (responseCode == HederaResponseCodes.SUCCESS) {
+            return super.approve(spender, amount);
+        } else {
+            revert HtsPrecompileError(responseCode);
+        }
+
+    }
+
+    function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
+        int64 responseCode = HtsPrecompile.preTransfer(msg.sender, from, to, amount);
+        if (responseCode == HederaResponseCodes.SUCCESS) {
+            return super.transferFrom(from, to, amount);
+        } else {
+            revert HtsPrecompileError(responseCode);
+        }
+    }
+
+    function transfer(address to, uint256 amount) public virtual override returns (bool) {
+        int64 responseCode = HtsPrecompile.preTransfer(ADDRESS_ZERO, msg.sender, to, amount);
+        if (responseCode == HederaResponseCodes.SUCCESS) {
+            return super.transfer(to, amount);
+        } else {
+            revert HtsPrecompileError(responseCode);
+        }
     }
 }
