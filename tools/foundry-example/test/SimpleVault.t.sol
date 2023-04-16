@@ -15,19 +15,19 @@ contract SimpleVaultTest is Test {
     }
 
     // positive cases:
-    function testDeposit() public {
+    function test_Deposit() public {
     }
 
-    function testWithdraw() public {
+    function test_Withdraw() public {
     }
 
-    function testDepositAndWithdraw() public {
+    function test_DepositAndWithdraw() public {
     }
 
     // negative cases:
-    function testCannotDepositIfNotAssociated() public {
+    function test_CannotDepositIfNotAssociated() public {
     }
 
-    function testCannotWithdrawIfNotAssociated() public {
+    function test_CannotWithdrawIfNotAssociated() public {
     }
 }
