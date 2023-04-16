@@ -13,16 +13,12 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     /// @dev only for Fungible tokens
     // Fungible token -> FungibleTokenInfo
     mapping(address => FungibleTokenInfo) internal _fungibleTokenInfos;
-    // Fungible token -> keyType -> value e.g. 1 -> 0x123 means that the ADMIN is account 0x123
-    mapping(address => mapping(uint => address)) internal _tokenKeys; /// @dev faster access then getting keys via FungibleTokenInfo#TokenInfo.HederaToken.tokenKeys[]; however only supports KeyValueType.CONTRACT_ID
     // Fungible token -> _isFungible
     mapping(address => bool) internal _isFungible;
 
     /// @dev only for NonFungibleToken
     // // NFT token -> NonFungibleTokenInfo
     mapping(address => NonFungibleTokenInfo) internal _nonFungibleTokenInfos;
-    // // NFT token -> owner -> spender -> serialNumber -> isAllowed
-    // mapping(address => mapping(address => mapping(address => mapping(uint256 => bool)))) internal _nftAllowances;
     // NFT token -> _isNonFungible
     mapping(address => bool) internal _isNonFungible;
 
@@ -33,6 +29,8 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     mapping(address => mapping(address => bool)) internal _kyc;
     // HTS token -> account -> isFrozen
     mapping(address => mapping(address => bool)) internal _frozen;
+    // HTS token -> keyType -> value e.g. 1 -> 0x123 means that the ADMIN is account 0x123
+    mapping(address => mapping(uint => address)) internal _tokenKeys; /// @dev faster access then getting keys via {FungibleTokenInfo|NonFungibleTokenInfo}#TokenInfo.HederaToken.tokenKeys[]; however only supports KeyValueType.CONTRACT_ID
 
     modifier onlyHederaToken() {
         require(_isToken(msg.sender), 'NOT_HEDERA_TOKEN');
