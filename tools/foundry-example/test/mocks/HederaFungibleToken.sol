@@ -65,7 +65,10 @@ contract HederaFungibleToken is ERC20, KeyHelper {
     }
 
     /// @dev transfers "amount" from "from" to "to"
-    function transferRequestFromHtsPrecompile(address from, address to, uint256 amount) external onlyHtsPrecompile {
+    function transferRequestFromHtsPrecompile(bool isRequestFromOwner, address spender, address from, address to, uint256 amount) external onlyHtsPrecompile {
+        if (!isRequestFromOwner) {
+            _spendAllowance(from, spender, amount);
+        }
         _transfer(from, to, amount);
     }
 

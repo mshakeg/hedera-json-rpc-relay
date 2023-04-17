@@ -155,10 +155,6 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     }
 
     function _preCreateToken(HederaToken memory token) internal view returns (int64 responseCode) {
-        console.log('sender %s', msg.sender);
-        console.log('origin %s', tx.origin);
-        console.log('treasury %s', token.treasury);
-
         bool validTreasurySig = _isAccountOriginOrSender(token.treasury);
         // TODO: add additional validation on token; validation most likely required on only tokenKeys(if an address(contract/EOA) has a zero-balance then consider the tokenKey invalid since active accounts on Hedera must have a positive HBAR balance)
 
@@ -243,7 +239,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         address from,
         address to,
         uint256 amount
-    ) internal view returns (int64 responseCode) {
+    ) internal view returns (int64 responseCode, bool isRequestFromOwner) {
         bool isFungible = _isFungible[token];
 
         // extract logic for preTransfer
@@ -264,7 +260,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
 
                 /// @dev if transfer request is not from owner then check allowance of msg.sender
                 bool shouldAssumeRequestFromOwner = spender == ADDRESS_ZERO;
-                bool isRequestFromOwner = _isAccountOriginOrSender(from) || shouldAssumeRequestFromOwner;
+                isRequestFromOwner = _isAccountOriginOrSender(from) || shouldAssumeRequestFromOwner;
 
                 if (isRequestFromOwner) {
                     responseCode = HederaResponseCodes.SUCCESS;
@@ -315,7 +311,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         uint256 amount
     ) external onlyHederaToken returns (int64 responseCode) {
         address token = msg.sender;
-        responseCode = _precheckTransfer(token, spender, from, to, amount);
+        (responseCode, ) = _precheckTransfer(token, spender, from, to, amount);
     }
 
     /// @dev register HederaFungibleToken; msg.sender is the HederaFungibleToken
@@ -727,9 +723,11 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         uint256 amount
     ) external noDelegateCall returns (int64 responseCode) {
         /// @dev spender is set to non-zero address such that shouldAssumeRequestFromOwner always evaluates to false if HtsPrecompileMock#transferFrom is called
-        responseCode = _precheckTransfer(token, msg.sender, from, to, amount);
+        address spender = msg.sender;
+        bool isRequestFromOwner;
+        (responseCode, isRequestFromOwner) = _precheckTransfer(token, spender, from, to, amount);
         if (responseCode == HederaResponseCodes.SUCCESS) {
-            HederaFungibleToken(token).transferRequestFromHtsPrecompile(from, to, amount);
+            HederaFungibleToken(token).transferRequestFromHtsPrecompile(isRequestFromOwner, spender, from, to, amount);
         }
     }
 
