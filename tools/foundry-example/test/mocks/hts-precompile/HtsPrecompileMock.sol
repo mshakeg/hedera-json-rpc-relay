@@ -7,7 +7,7 @@ import 'hedera-smart-contracts/hts-precompile/HederaResponseCodes.sol';
 import 'hedera-smart-contracts/hts-precompile/IHederaTokenService.sol';
 import 'hedera-smart-contracts/hts-precompile/KeyHelper.sol';
 import './HederaFungibleToken.sol';
-import '../../src/NoDelegateCall.sol';
+import '../../../src/NoDelegateCall.sol';
 
 contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     address internal constant HTS_PRECOMPILE = address(0x167);

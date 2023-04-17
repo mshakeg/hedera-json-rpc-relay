@@ -6,8 +6,8 @@ import 'forge-std/console.sol';
 
 import 'hedera-smart-contracts/hts-precompile/IHederaTokenService.sol';
 import 'hedera-smart-contracts/hts-precompile/HederaResponseCodes.sol';
-import './mocks/HederaFungibleToken.sol';
-import './mocks/HtsPrecompileMock.sol';
+import './mocks/hts-precompile/HederaFungibleToken.sol';
+import './mocks/hts-precompile/HtsPrecompileMock.sol';
 
 contract HederaFungibleTokenTest is Test {
     address alice = vm.addr(1);
