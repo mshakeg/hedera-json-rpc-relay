@@ -27,3 +27,5 @@ For example:
 
 Or to run all tests in a file:
 `forge test --match-path test/{FileName}.t.sol`
+
+For varying degrees of verbosity in trace logs use the flags: `-v`, `-vv`, `-vvv` and `-vvvv`

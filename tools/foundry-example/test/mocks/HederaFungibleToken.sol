@@ -26,11 +26,13 @@ contract HederaFungibleToken is ERC20, KeyHelper {
     HtsPrecompileMock internal constant HtsPrecompile = HtsPrecompileMock(HTS_PRECOMPILE);
 
     bool public constant IS_FUNGIBLE = true; /// @dev if HederaNonFungibleToken then false
+    uint8 internal immutable _decimals;
 
     constructor(
         IHederaTokenService.FungibleTokenInfo memory _fungibleTokenInfo
     ) ERC20(_fungibleTokenInfo.tokenInfo.token.name, _fungibleTokenInfo.tokenInfo.token.symbol) {
         HtsPrecompile.registerHederaFungibleToken(_fungibleTokenInfo);
+        _decimals = uint8(uint32(_fungibleTokenInfo.decimals));
         address treasury = _fungibleTokenInfo.tokenInfo.token.treasury;
         _mint(treasury, uint(uint64(_fungibleTokenInfo.tokenInfo.totalSupply)));
     }
@@ -103,5 +105,10 @@ contract HederaFungibleToken is ERC20, KeyHelper {
         } else {
             revert HtsPrecompileError(responseCode);
         }
+    }
+
+    // standard ERC20 overriden functions
+    function decimals() public view override returns (uint8) {
+        return _decimals;
     }
 }

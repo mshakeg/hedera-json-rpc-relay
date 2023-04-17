@@ -292,7 +292,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         responseCode = _precheckApprove(token, owner, spender, amount);
     }
 
-    /// @note not currently called by Hedera{}Token
+    /// @dev not currently called by Hedera{}Token
     function preMint(
         address token,
         int64 amount,
@@ -302,7 +302,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         responseCode = _precheckMint(token, amount, metadata);
     }
 
-    /// @note not currently called by Hedera{}Token
+    /// @dev not currently called by Hedera{}Token
     function preBurn(int64 amount, int64[] memory serialNumbers) external onlyHederaToken returns (int64 responseCode) {
         address token = msg.sender;
         responseCode = _precheckBurn(token, amount, serialNumbers);
@@ -438,6 +438,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         if (!isFungibleToken && !isNonFungibleToken) {
             responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
         } else {
+            responseCode = HederaResponseCodes.SUCCESS;
             tokenType = isFungibleToken ? int8(0) : int8(1);
         }
     }
