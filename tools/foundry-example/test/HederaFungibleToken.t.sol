@@ -233,9 +233,122 @@ contract HederaFungibleTokenTest is Test {
         assertEq(allowanceBob, allowanceForBob, "bob's expected allowance not set correctly");
     }
 
-    function test_TransferViaHtsPrecompile() public {}
+    function test_TransferViaHtsPrecompile() public setPranker(alice) {
+        int64 initialTotalSupply = 1e16;
+        uint initialTotalSupplyU256 = uint64(initialTotalSupply);
+        int32 decimals = 8;
+        IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo = _getSimpleHederaFungibleTokenInfo(
+            'Token A',
+            'TA',
+            alice,
+            initialTotalSupply,
+            decimals
+        );
 
-    function test_TransferDirectly() public {}
+        IHederaTokenService.HederaToken memory token = fungibleTokenInfo.tokenInfo.token;
+
+        /// @dev no need to register newly created HederaFungibleToken in this context as the constructor will call HtsPrecompileMock#registerHederaFungibleToken
+        HederaFungibleToken hederaFungibleToken = new HederaFungibleToken(fungibleTokenInfo);
+        address tokenAddress = address(hederaFungibleToken);
+
+        uint transferToBob = 1e8;
+
+        uint balanceAlice = hederaFungibleToken.balanceOf(alice);
+        uint balanceBob = hederaFungibleToken.balanceOf(bob);
+
+        assertEq(balanceAlice, initialTotalSupplyU256, 'expected alice to have a 0 initialTotalSupply starting balance');
+        assertEq(balanceBob, 0, 'expected bob to have a 0 starting balance');
+
+        int64 responseCode = htsPrecompile.transferFrom(tokenAddress, alice, bob, transferToBob);
+
+        assertEq(
+            responseCode,
+            HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT,
+            'expected to not transfer due to bob not being associated'
+        );
+
+        vm.stopPrank();
+        vm.prank(bob);
+
+        responseCode = htsPrecompile.associateToken(bob, tokenAddress);
+        assertEq(responseCode, HederaResponseCodes.SUCCESS, 'expected bob to associate with token');
+
+        assertEq(htsPrecompile.isAssociated(bob, tokenAddress), true, "expected bob to be associated with token");
+
+        vm.startPrank(alice);
+
+        responseCode = htsPrecompile.transferFrom(tokenAddress, alice, bob, transferToBob);
+
+        assertEq(
+            responseCode,
+            HederaResponseCodes.SUCCESS,
+            "expected successful transfer to bob from alice"
+        );
+
+        balanceAlice = hederaFungibleToken.balanceOf(alice);
+        balanceBob = hederaFungibleToken.balanceOf(bob);
+
+        assertEq(balanceAlice, initialTotalSupplyU256 - transferToBob, 'expected alice balance to decrease by transferToBob amount');
+        assertEq(balanceBob, transferToBob, 'expected bob balance to increase by transferToBob amount');
+    }
+
+    function test_TransferDirectly() public setPranker(alice) {
+        int64 initialTotalSupply = 1e16;
+        uint initialTotalSupplyU256 = uint64(initialTotalSupply);
+        int32 decimals = 8;
+        IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo = _getSimpleHederaFungibleTokenInfo(
+            'Token A',
+            'TA',
+            alice,
+            initialTotalSupply,
+            decimals
+        );
+
+        IHederaTokenService.HederaToken memory token = fungibleTokenInfo.tokenInfo.token;
+
+        /// @dev no need to register newly created HederaFungibleToken in this context as the constructor will call HtsPrecompileMock#registerHederaFungibleToken
+        HederaFungibleToken hederaFungibleToken = new HederaFungibleToken(fungibleTokenInfo);
+        address tokenAddress = address(hederaFungibleToken);
+
+        uint transferToBob = 1e8;
+
+        uint balanceAlice = hederaFungibleToken.balanceOf(alice);
+        uint balanceBob = hederaFungibleToken.balanceOf(bob);
+
+        assertEq(balanceAlice, initialTotalSupplyU256, 'expected alice to have a 0 initialTotalSupply starting balance');
+        assertEq(balanceBob, 0, 'expected bob to have a 0 starting balance');
+
+        vm.expectRevert(abi.encodeWithSelector(HederaFungibleToken.HtsPrecompileError.selector, HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT));
+        hederaFungibleToken.transfer(bob, transferToBob);
+
+        vm.stopPrank();
+        vm.prank(bob);
+
+        int64 responseCode = htsPrecompile.associateToken(bob, tokenAddress);
+        assertEq(responseCode, HederaResponseCodes.SUCCESS, 'expected bob to associate with token');
+
+        assertEq(htsPrecompile.isAssociated(bob, tokenAddress), true, "expected bob to be associated with token");
+
+        vm.startPrank(alice);
+
+        bool success = hederaFungibleToken.transfer(bob, transferToBob);
+
+        assertEq(
+            success,
+            true,
+            "expected successful transfer to bob from alice"
+        );
+
+        balanceAlice = hederaFungibleToken.balanceOf(alice);
+        balanceBob = hederaFungibleToken.balanceOf(bob);
+
+        assertEq(balanceAlice, initialTotalSupplyU256 - transferToBob, 'expected alice balance to decrease by transferToBob amount');
+        assertEq(balanceBob, transferToBob, 'expected bob balance to increase by transferToBob amount');
+    }
+
+    function test_TransferUsingAllowanceViaHtsPrecompile() public {}
+
+    function test_TransferUsingAllowanceDirectly() public {}
 
     // negative cases
     function test_CannotApproveIfSpenderNotAssociated() public {
