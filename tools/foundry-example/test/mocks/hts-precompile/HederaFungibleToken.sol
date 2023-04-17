@@ -5,19 +5,9 @@ import 'openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
 
 import 'hedera-smart-contracts/hts-precompile/HederaResponseCodes.sol';
 import 'hedera-smart-contracts/hts-precompile/IHederaTokenService.sol';
-import 'hedera-smart-contracts/hts-precompile/KeyHelper.sol';
 import './HtsPrecompileMock.sol';
 
-// TODO: create a tighter coupling between instances of HederaFungibleToken and the HtsPrecompileMock contract
-//       such that if a HederaFungibleToken contract is created directly it's registered with the HtsPrecompileMock contract
-//       and if an action is attempted directly via the HederaFungibleToken contract it first goes through the HtsPrecompileMock contract
-//       and if an action goes through the HtsPrecompileMock contract then it ultimately calls the HederaFungibleToken contract
-//       HederaFungibleToken contract should store state related to ERC20 and do validation related to ERC20
-//       HtsPrecompileMock contract should store extra state related to the HTS and do validation related to HTS business logic
-//       HederaFungibleToken contract should expose special methods only callable by the precompile contract
-//       Doing it like this would remove the need for the {grant|revoke}HtsPrecompilePermissions flow
-
-contract HederaFungibleToken is ERC20, KeyHelper {
+contract HederaFungibleToken is ERC20 {
 
     error HtsPrecompileError(int64 responseCode);
     address constant ADDRESS_ZERO = address(0);

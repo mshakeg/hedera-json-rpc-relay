@@ -19,8 +19,8 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     mapping(address => bool) internal _isFungible;
 
     /// @dev only for NonFungibleToken
-    // // NFT token -> NonFungibleTokenInfo
-    mapping(address => NonFungibleTokenInfo) internal _nonFungibleTokenInfos;
+    // // NFT token -> TokenInfo; TokenInfo is used instead of NonFungibleTokenInfo as the former is common to all NFT instances whereas the latter is for a specific NFT instance(uniquely identified by its serialNumber)
+    mapping(address => TokenInfo) internal _nftTokenInfos;
     // NFT token -> _isNonFungible
     mapping(address => bool) internal _isNonFungible;
 
@@ -106,52 +106,99 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     }
 
     function _setFungibleTokenInfo(FungibleTokenInfo memory fungibleTokenInfo) internal returns (address treasury) {
-        _fungibleTokenInfos[msg.sender].tokenInfo.token.name = fungibleTokenInfo.tokenInfo.token.name;
-        _fungibleTokenInfos[msg.sender].tokenInfo.token.symbol = fungibleTokenInfo.tokenInfo.token.symbol;
-        _fungibleTokenInfos[msg.sender].tokenInfo.token.treasury = fungibleTokenInfo.tokenInfo.token.treasury;
+        address tokenAddress = msg.sender;
+        _fungibleTokenInfos[tokenAddress].tokenInfo.token.name = fungibleTokenInfo.tokenInfo.token.name;
+        _fungibleTokenInfos[tokenAddress].tokenInfo.token.symbol = fungibleTokenInfo.tokenInfo.token.symbol;
+        _fungibleTokenInfos[tokenAddress].tokenInfo.token.treasury = fungibleTokenInfo.tokenInfo.token.treasury;
 
         treasury = fungibleTokenInfo.tokenInfo.token.treasury;
 
-        _fungibleTokenInfos[msg.sender].tokenInfo.token.memo = fungibleTokenInfo.tokenInfo.token.memo;
-        _fungibleTokenInfos[msg.sender].tokenInfo.token.tokenSupplyType = fungibleTokenInfo
+        _fungibleTokenInfos[tokenAddress].tokenInfo.token.memo = fungibleTokenInfo.tokenInfo.token.memo;
+        _fungibleTokenInfos[tokenAddress].tokenInfo.token.tokenSupplyType = fungibleTokenInfo
             .tokenInfo
             .token
             .tokenSupplyType;
-        _fungibleTokenInfos[msg.sender].tokenInfo.token.maxSupply = fungibleTokenInfo.tokenInfo.token.maxSupply;
-        _fungibleTokenInfos[msg.sender].tokenInfo.token.freezeDefault = fungibleTokenInfo.tokenInfo.token.freezeDefault;
+        _fungibleTokenInfos[tokenAddress].tokenInfo.token.maxSupply = fungibleTokenInfo.tokenInfo.token.maxSupply;
+        _fungibleTokenInfos[tokenAddress].tokenInfo.token.freezeDefault = fungibleTokenInfo.tokenInfo.token.freezeDefault;
 
         // Copy the tokenKeys array
         uint256 length = fungibleTokenInfo.tokenInfo.token.tokenKeys.length;
         for (uint256 i = 0; i < length; i++) {
             TokenKey memory tokenKey = fungibleTokenInfo.tokenInfo.token.tokenKeys[i];
-            _fungibleTokenInfos[msg.sender].tokenInfo.token.tokenKeys.push(tokenKey);
+            _fungibleTokenInfos[tokenAddress].tokenInfo.token.tokenKeys.push(tokenKey);
 
             /// @dev contractId can in fact be any address including an EOA address
             ///      The KeyHelper lists 5 types for KeyValueType; however only CONTRACT_ID is considered
-            _tokenKeys[msg.sender][tokenKey.keyType] = tokenKey.key.contractId;
+            _tokenKeys[tokenAddress][tokenKey.keyType] = tokenKey.key.contractId;
         }
 
-        _fungibleTokenInfos[msg.sender].tokenInfo.token.expiry.second = fungibleTokenInfo.tokenInfo.token.expiry.second;
-        _fungibleTokenInfos[msg.sender].tokenInfo.token.expiry.autoRenewAccount = fungibleTokenInfo
+        _fungibleTokenInfos[tokenAddress].tokenInfo.token.expiry.second = fungibleTokenInfo.tokenInfo.token.expiry.second;
+        _fungibleTokenInfos[tokenAddress].tokenInfo.token.expiry.autoRenewAccount = fungibleTokenInfo
             .tokenInfo
             .token
             .expiry
             .autoRenewAccount;
-        _fungibleTokenInfos[msg.sender].tokenInfo.token.expiry.autoRenewPeriod = fungibleTokenInfo
+        _fungibleTokenInfos[tokenAddress].tokenInfo.token.expiry.autoRenewPeriod = fungibleTokenInfo
             .tokenInfo
             .token
             .expiry
             .autoRenewPeriod;
 
-        _fungibleTokenInfos[msg.sender].tokenInfo.totalSupply = fungibleTokenInfo.tokenInfo.totalSupply;
-        _fungibleTokenInfos[msg.sender].tokenInfo.deleted = fungibleTokenInfo.tokenInfo.deleted;
-        _fungibleTokenInfos[msg.sender].tokenInfo.defaultKycStatus = fungibleTokenInfo.tokenInfo.defaultKycStatus;
-        _fungibleTokenInfos[msg.sender].tokenInfo.pauseStatus = fungibleTokenInfo.tokenInfo.pauseStatus;
+        _fungibleTokenInfos[tokenAddress].tokenInfo.totalSupply = fungibleTokenInfo.tokenInfo.totalSupply;
+        _fungibleTokenInfos[tokenAddress].tokenInfo.deleted = fungibleTokenInfo.tokenInfo.deleted;
+        _fungibleTokenInfos[tokenAddress].tokenInfo.defaultKycStatus = fungibleTokenInfo.tokenInfo.defaultKycStatus;
+        _fungibleTokenInfos[tokenAddress].tokenInfo.pauseStatus = fungibleTokenInfo.tokenInfo.pauseStatus;
 
         // Handle copying of other arrays (fixedFees, fractionalFees, and royaltyFees) if needed
 
-        _fungibleTokenInfos[msg.sender].tokenInfo.ledgerId = fungibleTokenInfo.tokenInfo.ledgerId;
-        _fungibleTokenInfos[msg.sender].decimals = fungibleTokenInfo.decimals;
+        _fungibleTokenInfos[tokenAddress].tokenInfo.ledgerId = fungibleTokenInfo.tokenInfo.ledgerId;
+        _fungibleTokenInfos[tokenAddress].decimals = fungibleTokenInfo.decimals;
+    }
+
+    function _setNftTokenInfo(TokenInfo memory nftTokenInfo) internal returns (address treasury) {
+        address tokenAddress = msg.sender;
+        _nftTokenInfos[tokenAddress].token.name = nftTokenInfo.token.name;
+        _nftTokenInfos[tokenAddress].token.symbol = nftTokenInfo.token.symbol;
+        _nftTokenInfos[tokenAddress].token.treasury = nftTokenInfo.token.treasury;
+
+        treasury = nftTokenInfo.token.treasury;
+
+        _nftTokenInfos[tokenAddress].token.memo = nftTokenInfo.token.memo;
+        _nftTokenInfos[tokenAddress].token.tokenSupplyType = nftTokenInfo
+            .token
+            .tokenSupplyType;
+        _nftTokenInfos[tokenAddress].token.maxSupply = nftTokenInfo.token.maxSupply;
+        _nftTokenInfos[tokenAddress].token.freezeDefault = nftTokenInfo.token.freezeDefault;
+
+        // Copy the tokenKeys array
+        uint256 length = nftTokenInfo.token.tokenKeys.length;
+        for (uint256 i = 0; i < length; i++) {
+            TokenKey memory tokenKey = nftTokenInfo.token.tokenKeys[i];
+            _nftTokenInfos[tokenAddress].token.tokenKeys.push(tokenKey);
+
+            /// @dev contractId can in fact be any address including an EOA address
+            ///      The KeyHelper lists 5 types for KeyValueType; however only CONTRACT_ID is considered
+            _tokenKeys[tokenAddress][tokenKey.keyType] = tokenKey.key.contractId;
+        }
+
+        _nftTokenInfos[tokenAddress].token.expiry.second = nftTokenInfo.token.expiry.second;
+        _nftTokenInfos[tokenAddress].token.expiry.autoRenewAccount = nftTokenInfo
+            .token
+            .expiry
+            .autoRenewAccount;
+        _nftTokenInfos[tokenAddress].token.expiry.autoRenewPeriod = nftTokenInfo
+            .token
+            .expiry
+            .autoRenewPeriod;
+
+        _nftTokenInfos[tokenAddress].totalSupply = nftTokenInfo.totalSupply;
+        _nftTokenInfos[tokenAddress].deleted = nftTokenInfo.deleted;
+        _nftTokenInfos[tokenAddress].defaultKycStatus = nftTokenInfo.defaultKycStatus;
+        _nftTokenInfos[tokenAddress].pauseStatus = nftTokenInfo.pauseStatus;
+
+        // Handle copying of other arrays (fixedFees, fractionalFees, and royaltyFees) if needed
+
+        _nftTokenInfos[tokenAddress].ledgerId = nftTokenInfo.ledgerId;
     }
 
     function _preCreateToken(HederaToken memory token) internal view returns (int64 responseCode) {
@@ -227,7 +274,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
             }
         } else if (_isNonFungible[token]) {
             // TODO: NonFungibleToken
-            NonFungibleTokenInfo memory nonFungibleTokenInfo = _nonFungibleTokenInfos[token];
+            TokenInfo memory nftTokenInfo = _nftTokenInfos[token];
         } else {
             responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
         }
@@ -325,7 +372,12 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
 
     /// @dev register HederaNonFungibleToken; msg.sender is the HederaNonFungibleToken
     ///      can be called by any contract; however assumes msg.sender is a HederaNonFungibleToken
-    function registerHederaNonFungibleToken(NonFungibleTokenInfo memory nonFungibleTokenInfo) external {}
+    function registerHederaNonFungibleToken(TokenInfo memory nftTokenInfo) external {
+        address tokenAddress = msg.sender;
+        _isNonFungible[tokenAddress] = true;
+        address treasury = _setNftTokenInfo(nftTokenInfo);
+        associateToken(treasury, tokenAddress);
+    }
 
     // IHederaTokenService public/external view functions:
     function getApproved(
