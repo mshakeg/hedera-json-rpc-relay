@@ -321,8 +321,10 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     /// @dev register HederaFungibleToken; msg.sender is the HederaFungibleToken
     ///      can be called by any contract; however assumes msg.sender is a HederaFungibleToken
     function registerHederaFungibleToken(FungibleTokenInfo memory fungibleTokenInfo) external {
-        _isFungible[msg.sender] = true;
-        _setFungibleTokenInfo(fungibleTokenInfo);
+        address tokenAddress = msg.sender;
+        _isFungible[tokenAddress] = true;
+        address treasury = _setFungibleTokenInfo(fungibleTokenInfo);
+        associateToken(treasury, tokenAddress);
     }
 
     /// @dev register HederaNonFungibleToken; msg.sender is the HederaNonFungibleToken
@@ -634,11 +636,11 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     function associateToken(address account, address token) public noDelegateCall returns (int64 responseCode) {
         if (!_isFungible[token] && !_isNonFungible[token]) {
             responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
-        } else if (_association[account][token]) {
+        } else if (_association[token][account]) {
             responseCode = HederaResponseCodes.TOKEN_ALREADY_ASSOCIATED_TO_ACCOUNT;
         } else {
             responseCode = HederaResponseCodes.SUCCESS;
-            _association[account][token] = true;
+            _association[token][account] = true;
         }
     }
 
@@ -675,11 +677,11 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     function dissociateToken(address account, address token) public noDelegateCall returns (int64 responseCode) {
         if (!_isFungible[token] && !_isNonFungible[token]) {
             responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
-        } else if (!_association[account][token]) {
+        } else if (!_association[token][account]) {
             responseCode = HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT;
         } else {
             responseCode = HederaResponseCodes.SUCCESS;
-            _association[account][token] = false;
+            _association[token][account] = false;
         }
     }
 
@@ -807,4 +809,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     function redirectForToken(address token, bytes memory encodedFunctionSelector) external noDelegateCall {}
 
     // Additional(not in IHederaTokenService) public/external state-changing functions:
+    function isAssociated(address account, address token) external view returns (bool associated) {
+        associated = _association[token][account];
+    }
 }
