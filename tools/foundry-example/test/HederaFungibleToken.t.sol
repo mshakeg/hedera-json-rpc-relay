@@ -184,7 +184,54 @@ contract HederaFungibleTokenTest is Test {
         assertEq(allowanceBob, allowanceForBob, "bob's expected allowance not set correctly");
     }
 
-    function test_ApproveDirectly() public {}
+    function test_ApproveDirectly() public {
+        int64 initialTotalSupply = 1e16;
+        int32 decimals = 8;
+        IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo = _getSimpleHederaFungibleTokenInfo(
+            'Token A',
+            'TA',
+            alice,
+            initialTotalSupply,
+            decimals
+        );
+
+        IHederaTokenService.HederaToken memory token = fungibleTokenInfo.tokenInfo.token;
+
+        /// @dev no need to register newly created HederaFungibleToken in this context as the constructor will call HtsPrecompileMock#registerHederaFungibleToken
+        HederaFungibleToken hederaFungibleToken = new HederaFungibleToken(fungibleTokenInfo);
+        address tokenAddress = address(hederaFungibleToken);
+
+        uint allowanceForBob = 1e8;
+
+        uint allowanceBob = hederaFungibleToken.allowance(alice, bob);
+
+        assertEq(allowanceBob, 0, 'expected bob to have a 0 starting allowance');
+
+        vm.expectRevert(abi.encodeWithSelector(HederaFungibleToken.HtsPrecompileError.selector, HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT));
+        hederaFungibleToken.approve(bob, allowanceForBob);
+
+        vm.stopPrank();
+        vm.prank(bob);
+
+        int64 responseCode = htsPrecompile.associateToken(bob, tokenAddress);
+        assertEq(responseCode, HederaResponseCodes.SUCCESS, 'expected bob to associate with token');
+
+        assertEq(htsPrecompile.isAssociated(bob, tokenAddress), true, "expected bob to be associated with token");
+
+        vm.startPrank(alice);
+
+        bool success = hederaFungibleToken.approve(bob, allowanceForBob);
+
+        assertEq(
+            success,
+            true,
+            "expected bob to be given token allowance to alice's account"
+        );
+
+        allowanceBob = hederaFungibleToken.allowance(alice, bob);
+
+        assertEq(allowanceBob, allowanceForBob, "bob's expected allowance not set correctly");
+    }
 
     function test_TransferViaHtsPrecompile() public {}
 
