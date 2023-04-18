@@ -30,9 +30,9 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     // HTS token -> account -> isAssociated
     mapping(address => mapping(address => bool)) internal _association;
     // HTS token -> account -> isKyced
-    mapping(address => mapping(address => bool)) internal _kyc;
+    mapping(address => mapping(address => bool)) internal _kyc; // is KYCed is the positive case(i.e. explicitly requires KYC approval); see defaultKycStatus
     // HTS token -> account -> isFrozen
-    mapping(address => mapping(address => bool)) internal _frozen;
+    mapping(address => mapping(address => bool)) internal _unfrozen; // is unfrozen is positive case(i.e. explicitly requires being unfrozen); see freezeDefault
     // HTS token -> keyType -> value e.g. 1 -> 0x123 means that the ADMIN is account 0x123
     mapping(address => mapping(uint => address)) internal _tokenKeys; /// @dev faster access then getting keys via {FungibleTokenInfo|NonFungibleTokenInfo}#TokenInfo.HederaToken.tokenKeys[]; however only supports KeyValueType.CONTRACT_ID
 
@@ -129,7 +129,10 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
             .token
             .tokenSupplyType;
         _fungibleTokenInfos[tokenAddress].tokenInfo.token.maxSupply = fungibleTokenInfo.tokenInfo.token.maxSupply;
-        _fungibleTokenInfos[tokenAddress].tokenInfo.token.freezeDefault = fungibleTokenInfo.tokenInfo.token.freezeDefault;
+        _fungibleTokenInfos[tokenAddress].tokenInfo.token.freezeDefault = fungibleTokenInfo
+            .tokenInfo
+            .token
+            .freezeDefault;
 
         // Copy the tokenKeys array
         uint256 length = fungibleTokenInfo.tokenInfo.token.tokenKeys.length;
@@ -142,7 +145,11 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
             _tokenKeys[tokenAddress][tokenKey.keyType] = tokenKey.key.contractId;
         }
 
-        _fungibleTokenInfos[tokenAddress].tokenInfo.token.expiry.second = fungibleTokenInfo.tokenInfo.token.expiry.second;
+        _fungibleTokenInfos[tokenAddress].tokenInfo.token.expiry.second = fungibleTokenInfo
+            .tokenInfo
+            .token
+            .expiry
+            .second;
         _fungibleTokenInfos[tokenAddress].tokenInfo.token.expiry.autoRenewAccount = fungibleTokenInfo
             .tokenInfo
             .token
@@ -174,9 +181,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         treasury = nftTokenInfo.token.treasury;
 
         _nftTokenInfos[tokenAddress].token.memo = nftTokenInfo.token.memo;
-        _nftTokenInfos[tokenAddress].token.tokenSupplyType = nftTokenInfo
-            .token
-            .tokenSupplyType;
+        _nftTokenInfos[tokenAddress].token.tokenSupplyType = nftTokenInfo.token.tokenSupplyType;
         _nftTokenInfos[tokenAddress].token.maxSupply = nftTokenInfo.token.maxSupply;
         _nftTokenInfos[tokenAddress].token.freezeDefault = nftTokenInfo.token.freezeDefault;
 
@@ -192,14 +197,8 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         }
 
         _nftTokenInfos[tokenAddress].token.expiry.second = nftTokenInfo.token.expiry.second;
-        _nftTokenInfos[tokenAddress].token.expiry.autoRenewAccount = nftTokenInfo
-            .token
-            .expiry
-            .autoRenewAccount;
-        _nftTokenInfos[tokenAddress].token.expiry.autoRenewPeriod = nftTokenInfo
-            .token
-            .expiry
-            .autoRenewPeriod;
+        _nftTokenInfos[tokenAddress].token.expiry.autoRenewAccount = nftTokenInfo.token.expiry.autoRenewAccount;
+        _nftTokenInfos[tokenAddress].token.expiry.autoRenewPeriod = nftTokenInfo.token.expiry.autoRenewPeriod;
 
         _nftTokenInfos[tokenAddress].totalSupply = nftTokenInfo.totalSupply;
         _nftTokenInfos[tokenAddress].deleted = nftTokenInfo.deleted;
@@ -233,12 +232,16 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         address spender,
         uint256 amountOrSerialNumber /// for Fungible is the amount and for NonFungible is the serialNumber
     ) internal view returns (int64 responseCode) {
-        if (!_isFungible[token]) {
-            responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
-        } else if (!_association[token][owner] || !_association[token][spender]) {
+        if (!_association[token][owner] || !_association[token][spender]) {
             responseCode = HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT;
         } else {
-            responseCode = HederaResponseCodes.SUCCESS;
+            if (!_isFungible[token]) {
+                responseCode = HederaResponseCodes.SUCCESS;
+            } else if (!_isNonFungible[token]) {
+                responseCode = HederaResponseCodes.SUCCESS;
+            } else {
+                responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
+            }
         }
     }
 
@@ -247,9 +250,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         address owner,
         address operator,
         bool approved
-    ) internal view returns (int64 responseCode) {
-
-    }
+    ) internal view returns (int64 responseCode) {}
 
     function _precheckMint(
         address token,
@@ -300,6 +301,55 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         }
     }
 
+    // account1 is typically the spender
+    // account2 is typically the owner
+    // account3 is typically the recipient
+    struct CommonPrecheckData {
+        bool isFungible;
+        bool isNonFungible;
+        bool doesAccount1PassKyc;
+        bool doesAccount2PassKyc;
+        bool doesAccount3PassKyc;
+        bool doesAccount1PassUnfrozen;
+        bool doesAccount2PassUnfrozen;
+        bool doesAccount3PassUnfrozen;
+    }
+
+    /// @dev doesPassKyc if KYC is not enabled or if enabled then account is KYCed explicitly or by default
+    function _doesAccountPassKyc(int64 responseCode, bool isKyced) internal pure returns (bool doesPassKyc) {
+        doesPassKyc = responseCode == HederaResponseCodes.SUCCESS ? isKyced : true;
+    }
+
+    /// @dev doesPassUnfrozen if freeze is not enabled or if enabled then account is unfrozen explicitly or by default
+    function _doesAccountPassUnfrozen(int64 responseCode, bool isFrozen) internal pure returns (bool doesPassUnfrozen) {
+        doesPassUnfrozen = responseCode == HederaResponseCodes.SUCCESS ? !isFrozen : true;
+    }
+
+    function _getCommonPrecheckData(address token, address account1, address account2, address account3) internal view returns (CommonPrecheckData memory commonPrecheckData) {
+
+            commonPrecheckData.isFungible = _isFungible[token];
+            commonPrecheckData.isNonFungible = _isNonFungible[token];
+
+            (int64 responseCodeForKyc, bool _isKyced) = isKyc(token, account1);
+            commonPrecheckData.doesAccount1PassKyc = _doesAccountPassKyc(responseCodeForKyc, _isKyced);
+
+            (responseCodeForKyc, _isKyced) = isKyc(token, account2);
+            commonPrecheckData.doesAccount2PassKyc = _doesAccountPassKyc(responseCodeForKyc, _isKyced);
+
+            (responseCodeForKyc, _isKyced) = isKyc(token, account3);
+            commonPrecheckData.doesAccount3PassKyc = _doesAccountPassKyc(responseCodeForKyc, _isKyced);
+
+            (int64 responseCodeForFrozen, bool _isFrozen) = isFrozen(token, account1);
+            commonPrecheckData.doesAccount1PassUnfrozen = _doesAccountPassUnfrozen(responseCodeForFrozen, _isFrozen);
+
+            (responseCodeForFrozen, _isFrozen) = isFrozen(token, account2);
+            commonPrecheckData.doesAccount2PassUnfrozen = _doesAccountPassUnfrozen(responseCodeForFrozen, _isFrozen);
+
+            (responseCodeForFrozen, _isFrozen) = isFrozen(token, account3);
+            commonPrecheckData.doesAccount3PassUnfrozen = _doesAccountPassUnfrozen(responseCodeForFrozen, _isFrozen);
+    }
+
+    /// @dev only applicable to tokens of type FUNGIBLE
     function _precheckTransfer(
         address token,
         address spender,
@@ -307,22 +357,17 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         address to,
         uint256 amount
     ) internal view returns (int64 responseCode, bool isRequestFromOwner) {
-        bool isFungible = _isFungible[token];
 
-        // extract logic for preTransfer
-        // if returns HederaResponseCodes.SUCCESS then call transferRequestFromHtsPrecompile
-
-        (, bool doesFromPassKyc) = isKyc(token, from);
-        (, bool doesToPassKyc) = isKyc(token, to);
+        CommonPrecheckData memory commonPrecheckData = _getCommonPrecheckData(token, spender, from, to);
 
         if (!_association[token][from] || !_association[token][to]) {
             responseCode = HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT;
-        } else if (_frozen[token][from] || _frozen[token][to]) {
+        } else if (!commonPrecheckData.doesAccount2PassUnfrozen || !commonPrecheckData.doesAccount3PassUnfrozen) {
             responseCode = HederaResponseCodes.ACCOUNT_FROZEN_FOR_TOKEN;
-        } else if (!doesFromPassKyc || !doesToPassKyc) {
+        } else if (!commonPrecheckData.doesAccount2PassKyc || !commonPrecheckData.doesAccount3PassKyc) {
             responseCode = HederaResponseCodes.ACCOUNT_KYC_NOT_GRANTED_FOR_TOKEN;
         } else {
-            if (_isFungible[token]) {
+            if (commonPrecheckData.isFungible) {
                 /// @dev should have sign from "from" or sender should have sufficient allowance for from
 
                 /// @dev if transfer request is not from owner then check allowance of msg.sender
@@ -427,7 +472,9 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         int64 serialNumber
     ) external view returns (int64 responseCode, NonFungibleTokenInfo memory nonFungibleTokenInfo) {
         TokenInfo memory nftTokenInfo = _nftTokenInfos[token];
-        PartialNonFungibleTokenInfo memory partialNonFungibleTokenInfo = _partialNonFungibleTokenInfos[token][serialNumber];
+        PartialNonFungibleTokenInfo memory partialNonFungibleTokenInfo = _partialNonFungibleTokenInfos[token][
+            serialNumber
+        ];
 
         nonFungibleTokenInfo.tokenInfo = nftTokenInfo;
 
@@ -560,27 +607,49 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         address operator
     ) external view returns (int64 responseCode, bool approved) {}
 
-    function isFrozen(address token, address account) external view returns (int64 responseCode, bool frozen) {
-        if (!_isFungible[token] && !_isNonFungible[token]) {
+    function isFrozen(address token, address account) public view returns (int64 responseCode, bool frozen) {
+
+        bool isFungible = _isFungible[token];
+        bool isNonFungible = _isNonFungible[token];
+
+        if (!isFungible && !isNonFungible) {
             responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
         } else if (getKey(token, KeyHelper.KeyType.FREEZE) == ADDRESS_ZERO) {
             responseCode = HederaResponseCodes.TOKEN_HAS_NO_FREEZE_KEY;
         } else {
-            // TODO: consider token's freezeDefault
-            frozen = _frozen[token][account];
+            bool freezeDefault;
+            if (isFungible) {
+                FungibleTokenInfo memory fungibleTokenInfo = _fungibleTokenInfos[token];
+                freezeDefault = fungibleTokenInfo.tokenInfo.token.freezeDefault;
+            } else {
+                TokenInfo memory nftTokenInfo = _nftTokenInfos[token];
+                freezeDefault = nftTokenInfo.token.freezeDefault;
+            }
+            /// @dev if freezeDefault is true then an account must explicitly be unfrozen otherwise assume unfrozen
+            frozen = freezeDefault ? !(_unfrozen[token][account]) : false;
             responseCode = HederaResponseCodes.SUCCESS;
         }
     }
 
     function isKyc(address token, address account) public view returns (int64 responseCode, bool kycGranted) {
-        kycGranted = true; /// @dev by default KYC is granted and only if the token has a KYC key then consider _kyc
-        if (!_isFungible[token] && !_isNonFungible[token]) {
+        bool isFungible = _isFungible[token];
+        bool isNonFungible = _isNonFungible[token];
+        if (!isFungible && !isNonFungible) {
             responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
         } else if (getKey(token, KeyHelper.KeyType.KYC) == ADDRESS_ZERO) {
             responseCode = HederaResponseCodes.TOKEN_HAS_NO_KYC_KEY;
         } else {
-            // TODO: consider token's defaultKycStatus
-            kycGranted = _kyc[token][account];
+            bool defaultKycStatus;
+            if (isFungible) {
+                FungibleTokenInfo memory fungibleTokenInfo = _fungibleTokenInfos[token];
+                defaultKycStatus = fungibleTokenInfo.tokenInfo.defaultKycStatus;
+            } else {
+                TokenInfo memory nftTokenInfo = _nftTokenInfos[token];
+                defaultKycStatus = nftTokenInfo.defaultKycStatus;
+            }
+
+            /// @dev if defaultKycStatus is true then an account must explicitly be KYCed otherwise assume KYCed
+            kycGranted = defaultKycStatus ? _kyc[token][account] : true;
             responseCode = HederaResponseCodes.SUCCESS;
         }
     }
