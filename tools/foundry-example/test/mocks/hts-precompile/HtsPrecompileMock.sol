@@ -21,6 +21,8 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     /// @dev only for NonFungibleToken
     // // NFT token -> TokenInfo; TokenInfo is used instead of NonFungibleTokenInfo as the former is common to all NFT instances whereas the latter is for a specific NFT instance(uniquely identified by its serialNumber)
     mapping(address => TokenInfo) internal _nftTokenInfos;
+    // // NFT token -> serialNumber -> PartialNonFungibleTokenInfo
+    mapping(address => mapping(int64 => PartialNonFungibleTokenInfo)) internal _partialNonFungibleTokenInfos;
     // NFT token -> _isNonFungible
     mapping(address => bool) internal _isNonFungible;
 
@@ -33,6 +35,14 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     mapping(address => mapping(address => bool)) internal _frozen;
     // HTS token -> keyType -> value e.g. 1 -> 0x123 means that the ADMIN is account 0x123
     mapping(address => mapping(uint => address)) internal _tokenKeys; /// @dev faster access then getting keys via {FungibleTokenInfo|NonFungibleTokenInfo}#TokenInfo.HederaToken.tokenKeys[]; however only supports KeyValueType.CONTRACT_ID
+
+    // this struct avoids duplicating common NFT data, in particular IHederaTokenService.NonFungibleTokenInfo.tokenInfo
+    struct PartialNonFungibleTokenInfo {
+        address ownerId;
+        int64 creationTime;
+        bytes metadata;
+        address spenderId;
+    }
 
     constructor() NoDelegateCall(HTS_PRECOMPILE) {}
 
@@ -216,11 +226,12 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     ///      1. before the HtsPrecompileMock calls any of the HederaFungibleToken or HederaNonFungibleToken functions that specify the onlyHtsPrecompile modifier
     ///      2. in any of HtsPrecompileMock functions that specifies the onlyHederaToken modifier which is only callable by a HederaFungibleToken or HederaNonFungibleToken contract
 
+    /// @dev for both Fungible and NonFungible
     function _precheckApprove(
         address token,
         address owner,
         address spender,
-        uint256 amount
+        uint256 amountOrSerialNumber /// for Fungible is the amount and for NonFungible is the serialNumber
     ) internal view returns (int64 responseCode) {
         if (!_isFungible[token]) {
             responseCode = HederaResponseCodes.INVALID_TOKEN_ID;
@@ -229,6 +240,15 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         } else {
             responseCode = HederaResponseCodes.SUCCESS;
         }
+    }
+
+    function _precheckSetApprovalForAll(
+        address token,
+        address owner,
+        address operator,
+        bool approved
+    ) internal view returns (int64 responseCode) {
+
     }
 
     function _precheckMint(
@@ -335,6 +355,15 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         responseCode = _precheckApprove(token, owner, spender, amount);
     }
 
+    function preSetApprovalForAll(
+        address owner,
+        address operator,
+        bool approved
+    ) internal view returns (int64 responseCode) {
+        address token = msg.sender;
+        responseCode = _precheckSetApprovalForAll(token, owner, operator, approved);
+    }
+
     /// @dev not currently called by Hedera{}Token
     function preMint(
         address token,
@@ -397,7 +426,19 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         address token,
         int64 serialNumber
     ) external view returns (int64 responseCode, NonFungibleTokenInfo memory nonFungibleTokenInfo) {
-        // TODO: NonFungibleToken
+        TokenInfo memory nftTokenInfo = _nftTokenInfos[token];
+        PartialNonFungibleTokenInfo memory partialNonFungibleTokenInfo = _partialNonFungibleTokenInfos[token][serialNumber];
+
+        nonFungibleTokenInfo.tokenInfo = nftTokenInfo;
+
+        nonFungibleTokenInfo.serialNumber = serialNumber;
+
+        nonFungibleTokenInfo.ownerId = partialNonFungibleTokenInfo.ownerId;
+        nonFungibleTokenInfo.creationTime = partialNonFungibleTokenInfo.creationTime;
+        nonFungibleTokenInfo.metadata = partialNonFungibleTokenInfo.metadata;
+        nonFungibleTokenInfo.spenderId = partialNonFungibleTokenInfo.spenderId;
+
+        responseCode = HederaResponseCodes.SUCCESS;
     }
 
     function getTokenCustomFees(
@@ -564,7 +605,11 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
 
     // Additional(not in IHederaTokenService) public/external view functions:
     function getKey(address token, KeyHelper.KeyType keyType) public view returns (address keyOwner) {
-        keyOwner = _tokenKeys[token][keyTypes[keyType]];
+        /// @dev for some reason getKeyType does not return the correct uint value; e.g. keyType = SUPPLY(i.e. 4) should return 16, but instead returns the enum value i.e. 4
+        ///      hence 2 ** keyType is used instead
+        uint _keyType = 2 ** uint(keyType);
+        // uint _keyType = getKeyType(keyType);
+        keyOwner = _tokenKeys[token][_keyType];
     }
 
     // IHederaTokenService public/external state-changing functions:
@@ -665,6 +710,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         }
     }
 
+    // TODO: for NFT
     function approveNFT(
         address token,
         address approved,
@@ -742,6 +788,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     ) external noDelegateCall returns (int64 responseCode, int64 newTotalSupply, int64[] memory serialNumbers) {
         responseCode = _precheckMint(token, amount, metadata);
         if (responseCode == HederaResponseCodes.SUCCESS) {
+            // TODO: both HTS types
             HederaFungibleToken(token).mintRequestFromHtsPrecompile(amount);
         }
     }
@@ -753,6 +800,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     ) external noDelegateCall returns (int64 responseCode, int64 newTotalSupply) {
         responseCode = _precheckBurn(token, amount, serialNumbers);
         if (responseCode == HederaResponseCodes.SUCCESS) {
+            // TODO: both HTS types
             HederaFungibleToken(token).burnRequestFromHtsPrecompile(amount);
         }
     }
@@ -761,11 +809,14 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
 
     function revokeTokenKyc(address token, address account) external noDelegateCall returns (int64 responseCode) {}
 
+    // TODO: for NFT
     function setApprovalForAll(
         address token,
         address operator,
         bool approved
-    ) external noDelegateCall returns (int64 responseCode) {}
+    ) external noDelegateCall returns (int64 responseCode) {
+        // _precheckSetApprovalForAll
+    }
 
     /// @dev only for HederaFungibleToken
     function transferFrom(
@@ -783,6 +834,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         }
     }
 
+    // TODO: for NFT
     function transferFromNFT(
         address token,
         address from,
@@ -792,6 +844,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         // TODO: NonFungibleToken
     }
 
+    // TODO: for NFT
     function transferNFT(
         address token,
         address sender,
@@ -801,6 +854,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         // TODO: NonFungibleToken
     }
 
+    // TODO: for NFT
     function transferNFTs(
         address token,
         address[] memory sender,
@@ -810,6 +864,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         // TODO: NonFungibleToken
     }
 
+    // TODO: for fungible
     function transferToken(
         address token,
         address sender,
@@ -817,6 +872,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         int64 amount
     ) external noDelegateCall returns (int64 responseCode) {}
 
+    // TODO: for fungible
     function transferTokens(
         address token,
         address[] memory accountId,
