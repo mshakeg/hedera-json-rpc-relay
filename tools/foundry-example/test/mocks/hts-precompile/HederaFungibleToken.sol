@@ -79,7 +79,6 @@ contract HederaFungibleToken is ERC20 {
         } else {
             revert HtsPrecompileError(responseCode);
         }
-
     }
 
     function transferFrom(address from, address to, uint256 amount) public override returns (bool) {

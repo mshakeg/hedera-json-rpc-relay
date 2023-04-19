@@ -14,9 +14,6 @@ contract HederaNonFungibleToken is ERC721 {
     address internal constant HTS_PRECOMPILE = address(0x167);
     HtsPrecompileMock internal constant HtsPrecompile = HtsPrecompileMock(HTS_PRECOMPILE);
 
-    // serialNumber -> spender -> approved
-    mapping(int64 => mapping(address => bool)) internal _tokenApprovals; /// @dev _tokenApprovals in ERC721 is private
-
     bool public constant IS_FUNGIBLE = false; /// @dev if HederaFungibleToken then true
 
     struct NFTCounter {
@@ -42,18 +39,22 @@ contract HederaNonFungibleToken is ERC721 {
 
     // public/external state-changing functions:
     // onlyHtsPrecompile functions:
-    function mintRequestFromHtsPrecompile(bytes[] memory metadata) external onlyHtsPrecompile returns(int64 newTotalSupply, int64 serialNumber) {
+    function mintRequestFromHtsPrecompile(
+        bytes[] memory metadata
+    ) external onlyHtsPrecompile returns (int64 newTotalSupply, int64 serialNumber) {
         (, IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo) = HtsPrecompile.getFungibleTokenInfo(
             address(this)
         );
         address treasury = fungibleTokenInfo.tokenInfo.token.treasury;
-        serialNumber = ++nftCount.minted;
+        serialNumber = ++nftCount.minted; // the first nft that is minted has serialNumber: 1
         _mint(treasury, uint64(serialNumber));
 
         newTotalSupply = int64(int256(totalSupply()));
     }
 
-    function burnRequestFromHtsPrecompile(int64[] calldata tokenIds) external onlyHtsPrecompile returns(int64 newTotalSupply) {
+    function burnRequestFromHtsPrecompile(
+        int64[] calldata tokenIds
+    ) external onlyHtsPrecompile returns (int64 newTotalSupply) {
         int64 burnCount = int64(uint64(tokenIds.length));
         nftCount.burned = nftCount.burned + burnCount;
 
@@ -66,14 +67,19 @@ contract HederaNonFungibleToken is ERC721 {
     }
 
     /// @dev transfers "amount" from "from" to "to"
-    function transferRequestFromHtsPrecompile(bool isRequestFromOwner, address spender, address from, address to, int64 tokenId) external onlyHtsPrecompile returns (int64 responseCode) {
-        bool isSpenderApproved = _isApprovedOrOwner(spender, uint64(tokenId));
+    function transferRequestFromHtsPrecompile(
+        bool isRequestFromOwner,
+        address spender,
+        address from,
+        address to,
+        uint256 tokenId
+    ) external onlyHtsPrecompile returns (int64 responseCode) {
+        bool isSpenderApproved = _isApprovedOrOwner(spender, tokenId);
         if (!isSpenderApproved) {
             responseCode = HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
         } else {
-            if (_tokenApprovals[tokenId][spender]) {
-                _tokenApprovals[tokenId][spender] = false;
-                _transfer(from, to, uint64(tokenId));
+            if (getApproved(tokenId) == spender) {
+                _transfer(from, to, tokenId);
                 responseCode = HederaResponseCodes.SUCCESS;
             } else {
                 responseCode = HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
@@ -81,11 +87,8 @@ contract HederaNonFungibleToken is ERC721 {
         }
     }
 
-    function approveRequestFromHtsPrecompile(
-        address spender,
-        int64 tokenId
-    ) external onlyHtsPrecompile {
-        _tokenApprovals[tokenId][spender] = true;
+    /// @dev unlike fungible/ERC20 tokens this only allows for a single spender to be approved at any one time
+    function approveRequestFromHtsPrecompile(address spender, int64 tokenId) external onlyHtsPrecompile {
         _approve(spender, uint64(tokenId));
     }
 
@@ -97,8 +100,62 @@ contract HederaNonFungibleToken is ERC721 {
         _setApprovalForAll(owner, operator, approved);
     }
 
+    // standard ERC721 functions overriden for HtsPrecompileMock prechecks:
+    function approve(address to, uint256 tokenId) public override {
+        address owner = _ownerOf(tokenId);
+        address spender = to;
+        int64 responseCode = HtsPrecompile.preApprove(owner, spender, tokenId);
+        if (responseCode == HederaResponseCodes.SUCCESS) {
+            return super.approve(to, tokenId);
+        } else {
+            revert HtsPrecompileError(responseCode);
+        }
+    }
+
+    function setApprovalForAll(address operator, bool approved) public override {
+        address owner = msg.sender;
+        int64 responseCode = HtsPrecompile.preSetApprovalForAll(owner, operator, approved);
+        if (responseCode == HederaResponseCodes.SUCCESS) {
+            return super.setApprovalForAll(operator, approved);
+        } else {
+            revert HtsPrecompileError(responseCode);
+        }
+    }
+
+    function transferFrom(address from, address to, uint256 tokenId) public override {
+        int64 responseCode = HtsPrecompile.preTransfer(msg.sender, from, to, tokenId);
+        if (responseCode == HederaResponseCodes.SUCCESS) {
+            return super.transferFrom(from, to, tokenId);
+        } else {
+            revert HtsPrecompileError(responseCode);
+        }
+    }
+
+    function safeTransferFrom(address from, address to, uint256 tokenId) public override {
+        int64 responseCode = HtsPrecompile.preTransfer(msg.sender, from, to, tokenId);
+        if (responseCode == HederaResponseCodes.SUCCESS) {
+            return super.safeTransferFrom(from, to, tokenId);
+        } else {
+            revert HtsPrecompileError(responseCode);
+        }
+    }
+
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public override {
+        int64 responseCode = HtsPrecompile.preTransfer(msg.sender, from, to, tokenId);
+        if (responseCode == HederaResponseCodes.SUCCESS) {
+            return super.safeTransferFrom(from, to, tokenId, data);
+        } else {
+            revert HtsPrecompileError(responseCode);
+        }
+    }
+
     // Additional(not in IHederaTokenService or in IERC721) public/external view functions:
     function totalSupply() public view returns (uint256) {
         return uint64(nftCount.minted - nftCount.burned);
     }
+
+    function isApprovedOrOwner(address spender, uint256 tokenId) external view returns (bool) {
+        return _isApprovedOrOwner(spender, tokenId);
+    }
+
 }
