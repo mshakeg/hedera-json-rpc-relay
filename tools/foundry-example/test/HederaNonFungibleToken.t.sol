@@ -622,7 +622,6 @@ contract HederaNonFungibleTokenTest is Test, KeyHelper {
             assertEq(newOwner, alice, "expected alice to be the new owner");
 
             vm.startPrank(alice);
-            console.log("nft id %s", uint64(serialNumbers[0]));
             (responseCode, newTotalSupply) = htsPrecompile.burnToken(tokenAddress, 0, serialNumbers);
             assertEq(responseCode, HederaResponseCodes.SUCCESS, 'expected success since alice is treasury');
         }
