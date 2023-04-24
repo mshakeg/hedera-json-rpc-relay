@@ -8,7 +8,6 @@ import 'hedera-smart-contracts/hts-precompile/IHederaTokenService.sol';
 import './HtsPrecompileMock.sol';
 
 contract HederaFungibleToken is ERC20 {
-
     error HtsPrecompileError(int64 responseCode);
     address constant ADDRESS_ZERO = address(0);
 
@@ -61,7 +60,7 @@ contract HederaFungibleToken is ERC20 {
         }
         _transfer(from, to, amount);
 
-        responseCode = HederaResponseCodes.SUCCESS;
+        return HederaResponseCodes.SUCCESS;
     }
 
     /// @dev gives "spender" an allowance of "amount" for "account"
