@@ -42,10 +42,11 @@ contract HederaNonFungibleToken is ERC721 {
     function mintRequestFromHtsPrecompile(
         bytes[] memory metadata
     ) external onlyHtsPrecompile returns (int64 newTotalSupply, int64 serialNumber) {
-        (, IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo) = HtsPrecompile.getFungibleTokenInfo(
+        (, IHederaTokenService.TokenInfo memory nftTokenInfo) = HtsPrecompile.getTokenInfo(
             address(this)
         );
-        address treasury = fungibleTokenInfo.tokenInfo.token.treasury;
+        address treasury = nftTokenInfo.token.treasury;
+
         serialNumber = ++nftCount.minted; // the first nft that is minted has serialNumber: 1
         _mint(treasury, uint64(serialNumber));
 
@@ -78,12 +79,14 @@ contract HederaNonFungibleToken is ERC721 {
         if (!isSpenderApproved) {
             responseCode = HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
         } else {
-            if (getApproved(tokenId) == spender) {
-                _transfer(from, to, tokenId);
-                responseCode = HederaResponseCodes.SUCCESS;
-            } else {
-                responseCode = HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
-            }
+            _transfer(from, to, tokenId);
+            responseCode = HederaResponseCodes.SUCCESS;
+            // if (getApproved(tokenId) == spender) {
+            //     _transfer(from, to, tokenId);
+            //     responseCode = HederaResponseCodes.SUCCESS;
+            // } else {
+            //     responseCode = HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
+            // }
         }
     }
 
@@ -106,6 +109,8 @@ contract HederaNonFungibleToken is ERC721 {
         address spender = to;
         int64 responseCode = HtsPrecompile.preApprove(owner, spender, tokenId);
         if (responseCode == HederaResponseCodes.SUCCESS) {
+            // TODO: do checks on approval prior to calling approval to avoid reverting with the OpenZeppelin error strings
+            // this checks can be done in the HtsPrecompile.pre{Action} functions and ultimately in the _precheck{Action} internal functions
             return super.approve(to, tokenId);
         } else {
             revert HtsPrecompileError(responseCode);

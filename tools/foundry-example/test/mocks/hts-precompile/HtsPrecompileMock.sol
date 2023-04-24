@@ -94,7 +94,11 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     }
 
     function _getTreasuryAccount(address token) internal view returns (address treasury) {
-        treasury = _fungibleTokenInfos[token].tokenInfo.token.treasury;
+        if (_isFungible[token]) {
+            treasury = _fungibleTokenInfos[token].tokenInfo.token.treasury;
+        } else {
+            treasury = _nftTokenInfos[token].token.treasury;
+        }
     }
 
     function _hasTreasurySig(address token) internal view returns (bool validKey, bool noKey) {
@@ -329,15 +333,27 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     function _precheckBurn(
         address token,
         int64 amount,
-        int64[] memory serialNumbers
+        int64[] memory serialNumbers // since only 1 NFT can be burnt at a time; expect length to be 1
     ) internal view returns (int64 responseCode) {
         bool isFungible = _isFungible[token];
         bool isNonFungible = _isNonFungible[token];
         if (isFungible || isNonFungible) {
             (bool validKey, bool noKey) = _hasTreasurySig(token);
+
+            address treasuryKey = _getTreasuryAccount(token);
+
+            HederaFungibleToken hederaFungibleToken = HederaFungibleToken(token);
+            HederaNonFungibleToken hederaNonFungibleToken = HederaNonFungibleToken(token);
+
+            bool doesTreasuryOwnSufficientToken = isFungible
+                ? (hederaFungibleToken.balanceOf(treasuryKey) >= uint64(amount))
+                : (treasuryKey == hederaNonFungibleToken.ownerOf(uint64(serialNumbers[0])));
+
             if (noKey || !validKey) {
                 /// @dev noKey should always be false as a token must have a treasury account; however use INVALID_TREASURY_ACCOUNT_FOR_TOKEN if treasury has been deleted
                 responseCode = HederaResponseCodes.AUTHORIZATION_FAILED;
+            } else if (!doesTreasuryOwnSufficientToken) {
+                responseCode = HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
             } else {
                 responseCode = HederaResponseCodes.SUCCESS;
             }
@@ -503,6 +519,10 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         address tokenAddress = msg.sender;
         _isNonFungible[tokenAddress] = true;
         address treasury = _setNftTokenInfo(nftTokenInfo);
+
+        // TODO: do proper validation on token in _preCreateToken
+        require(treasury != ADDRESS_ZERO, 'treasury == 0');
+
         associateToken(treasury, tokenAddress);
     }
 
@@ -937,15 +957,20 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         bytes[] memory metadata
     ) external noDelegateCall returns (int64 responseCode, int64 newTotalSupply, int64[] memory serialNumbers) {
         responseCode = _precheckMint(token, amount, metadata);
+
         if (responseCode == HederaResponseCodes.SUCCESS) {
             if (_isFungible[token]) {
                 HederaFungibleToken hederaFungibleToken = HederaFungibleToken(token);
                 hederaFungibleToken.mintRequestFromHtsPrecompile(amount);
                 newTotalSupply = int64(int(hederaFungibleToken.totalSupply()));
             } else {
+                serialNumbers = new int64[](1); /// @dev since you can only mint 1 NFT at a time
+
                 int64 serialNumber;
                 (newTotalSupply, serialNumber) = HederaNonFungibleToken(token).mintRequestFromHtsPrecompile(metadata);
+
                 serialNumbers[0] = serialNumber;
+
                 _partialNonFungibleTokenInfos[token][serialNumber] = PartialNonFungibleTokenInfo({
                     ownerId: _getTreasuryAccount(token),
                     creationTime: int64(int(block.timestamp)),
@@ -1009,7 +1034,13 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         bool isRequestFromOwner;
         (responseCode, isRequestFromOwner) = _precheckTransfer(token, spender, from, to, amount);
         if (responseCode == HederaResponseCodes.SUCCESS) {
-            HederaFungibleToken(token).transferRequestFromHtsPrecompile(isRequestFromOwner, spender, from, to, amount);
+            responseCode = HederaFungibleToken(token).transferRequestFromHtsPrecompile(
+                isRequestFromOwner,
+                spender,
+                from,
+                to,
+                amount
+            );
         }
     }
 
@@ -1048,7 +1079,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         bool isRequestFromOwner;
         (responseCode, isRequestFromOwner) = _precheckTransfer(token, spender, sender, recipient, _serialNumber);
         if (responseCode == HederaResponseCodes.SUCCESS) {
-            HederaNonFungibleToken(token).transferRequestFromHtsPrecompile(
+            responseCode = HederaNonFungibleToken(token).transferRequestFromHtsPrecompile(
                 isRequestFromOwner,
                 spender,
                 sender,
@@ -1103,7 +1134,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         uint _amount = uint(int(amount));
         (responseCode, isRequestFromOwner) = _precheckTransfer(token, spender, sender, recipient, _amount);
         if (responseCode == HederaResponseCodes.SUCCESS) {
-            HederaFungibleToken(token).transferRequestFromHtsPrecompile(
+            responseCode = HederaFungibleToken(token).transferRequestFromHtsPrecompile(
                 isRequestFromOwner,
                 spender,
                 sender,

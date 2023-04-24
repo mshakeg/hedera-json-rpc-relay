@@ -55,11 +55,13 @@ contract HederaFungibleToken is ERC20 {
     }
 
     /// @dev transfers "amount" from "from" to "to"
-    function transferRequestFromHtsPrecompile(bool isRequestFromOwner, address spender, address from, address to, uint256 amount) external onlyHtsPrecompile {
+    function transferRequestFromHtsPrecompile(bool isRequestFromOwner, address spender, address from, address to, uint256 amount) external onlyHtsPrecompile returns (int64 responseCode) {
         if (!isRequestFromOwner) {
             _spendAllowance(from, spender, amount);
         }
         _transfer(from, to, amount);
+
+        responseCode = HederaResponseCodes.SUCCESS;
     }
 
     /// @dev gives "spender" an allowance of "amount" for "account"
