@@ -260,12 +260,10 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     function _preCreateToken(HederaToken memory token) internal view returns (int64 responseCode) {
         bool validTreasurySig = _isAccountOriginOrSender(token.treasury);
         // TODO: add additional validation on token; validation most likely required on only tokenKeys(if an address(contract/EOA) has a zero-balance then consider the tokenKey invalid since active accounts on Hedera must have a positive HBAR balance)
-
-        if (validTreasurySig) {
-            responseCode = HederaResponseCodes.SUCCESS;
-        } else {
+        if (!validTreasurySig) {
             responseCode = HederaResponseCodes.AUTHORIZATION_FAILED;
         }
+        return HederaResponseCodes.SUCCESS;
     }
 
     /// @dev the following internal _precheck functions are called in either of the following 2 scenarios:
@@ -291,11 +289,11 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
             return HederaResponseCodes.ACCOUNT_KYC_NOT_GRANTED_FOR_TOKEN;
         }
 
-        if (commonPrecheckData.isFungible || commonPrecheckData.isNonFungible) {
-            return HederaResponseCodes.SUCCESS;
-        } else {
-            return HederaResponseCodes.INVALID_TOKEN_ID;
+        if (!commonPrecheckData.isFungible && !commonPrecheckData.isNonFungible) {
+                        return HederaResponseCodes.INVALID_TOKEN_ID;
         }
+
+        return HederaResponseCodes.SUCCESS;
     }
 
     function _precheckSetApprovalForAll(
@@ -316,12 +314,12 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
             return HederaResponseCodes.ACCOUNT_KYC_NOT_GRANTED_FOR_TOKEN;
         }
 
-        if (commonPrecheckData.isNonFungible) {
-            return HederaResponseCodes.SUCCESS;
+        if (!commonPrecheckData.isNonFungible) {
+            /// @dev since setApprovalForAll is only applicable to token of type NON_FUNGIBLE
+            return HederaResponseCodes.INVALID_TOKEN_ID;
         }
 
-        /// @dev since setApprovalForAll is only applicable to token of type NON_FUNGIBLE
-        return HederaResponseCodes.INVALID_TOKEN_ID;
+        return HederaResponseCodes.SUCCESS;
     }
 
     function _precheckMint(
