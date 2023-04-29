@@ -75,29 +75,26 @@ contract HederaFungibleToken is ERC20 {
     // standard ERC20 functions overriden for HtsPrecompileMock prechecks:
     function approve(address spender, uint256 amount) public override returns (bool) {
         int64 responseCode = HtsPrecompile.preApprove(msg.sender, spender, amount);
-        if (responseCode == HederaResponseCodes.SUCCESS) {
-            return super.approve(spender, amount);
-        } else {
+        if (responseCode != HederaResponseCodes.SUCCESS) {
             revert HtsPrecompileError(responseCode);
         }
+        return super.approve(spender, amount);
     }
 
     function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
         int64 responseCode = HtsPrecompile.preTransfer(msg.sender, from, to, amount);
-        if (responseCode == HederaResponseCodes.SUCCESS) {
-            return super.transferFrom(from, to, amount);
-        } else {
+        if (responseCode != HederaResponseCodes.SUCCESS) {
             revert HtsPrecompileError(responseCode);
         }
+        return super.transferFrom(from, to, amount);
     }
 
     function transfer(address to, uint256 amount) public virtual override returns (bool) {
         int64 responseCode = HtsPrecompile.preTransfer(ADDRESS_ZERO, msg.sender, to, amount);
-        if (responseCode == HederaResponseCodes.SUCCESS) {
-            return super.transfer(to, amount);
-        } else {
+        if (responseCode != HederaResponseCodes.SUCCESS) {
             revert HtsPrecompileError(responseCode);
         }
+        return super.transfer(to, amount);
     }
 
     // standard ERC20 overriden functions

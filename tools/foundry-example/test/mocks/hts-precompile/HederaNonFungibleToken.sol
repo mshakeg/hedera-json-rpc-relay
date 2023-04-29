@@ -77,17 +77,17 @@ contract HederaNonFungibleToken is ERC721 {
     ) external onlyHtsPrecompile returns (int64 responseCode) {
         bool isSpenderApproved = _isApprovedOrOwner(spender, tokenId);
         if (!isSpenderApproved) {
-            responseCode = HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
-        } else {
-            _transfer(from, to, tokenId);
-            responseCode = HederaResponseCodes.SUCCESS;
-            // if (getApproved(tokenId) == spender) {
-            //     _transfer(from, to, tokenId);
-            //     responseCode = HederaResponseCodes.SUCCESS;
-            // } else {
-            //     responseCode = HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
-            // }
+            return HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
         }
+
+        _transfer(from, to, tokenId);
+        responseCode = HederaResponseCodes.SUCCESS;
+        // if (getApproved(tokenId) == spender) {
+        //     _transfer(from, to, tokenId);
+        //     responseCode = HederaResponseCodes.SUCCESS;
+        // } else {
+        //     responseCode = HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
+        // }
     }
 
     /// @dev unlike fungible/ERC20 tokens this only allows for a single spender to be approved at any one time
@@ -108,50 +108,46 @@ contract HederaNonFungibleToken is ERC721 {
         address owner = _ownerOf(tokenId);
         address spender = to;
         int64 responseCode = HtsPrecompile.preApprove(owner, spender, tokenId);
-        if (responseCode == HederaResponseCodes.SUCCESS) {
-            // TODO: do checks on approval prior to calling approval to avoid reverting with the OpenZeppelin error strings
-            // this checks can be done in the HtsPrecompile.pre{Action} functions and ultimately in the _precheck{Action} internal functions
-            return super.approve(to, tokenId);
-        } else {
+        if (responseCode != HederaResponseCodes.SUCCESS) {
             revert HtsPrecompileError(responseCode);
         }
+
+        // TODO: do checks on approval prior to calling approval to avoid reverting with the OpenZeppelin error strings
+        // this checks can be done in the HtsPrecompile.pre{Action} functions and ultimately in the _precheck{Action} internal functions
+        return super.approve(to, tokenId);
     }
 
     function setApprovalForAll(address operator, bool approved) public override {
         address owner = msg.sender;
         int64 responseCode = HtsPrecompile.preSetApprovalForAll(owner, operator, approved);
-        if (responseCode == HederaResponseCodes.SUCCESS) {
-            return super.setApprovalForAll(operator, approved);
-        } else {
+        if (responseCode != HederaResponseCodes.SUCCESS) {
             revert HtsPrecompileError(responseCode);
         }
+        return super.setApprovalForAll(operator, approved);
     }
 
     function transferFrom(address from, address to, uint256 tokenId) public override {
         int64 responseCode = HtsPrecompile.preTransfer(msg.sender, from, to, tokenId);
-        if (responseCode == HederaResponseCodes.SUCCESS) {
-            return super.transferFrom(from, to, tokenId);
-        } else {
+        if (responseCode != HederaResponseCodes.SUCCESS) {
             revert HtsPrecompileError(responseCode);
         }
+        return super.transferFrom(from, to, tokenId);
     }
 
     function safeTransferFrom(address from, address to, uint256 tokenId) public override {
         int64 responseCode = HtsPrecompile.preTransfer(msg.sender, from, to, tokenId);
-        if (responseCode == HederaResponseCodes.SUCCESS) {
-            return super.safeTransferFrom(from, to, tokenId);
-        } else {
+        if (responseCode != HederaResponseCodes.SUCCESS) {
             revert HtsPrecompileError(responseCode);
         }
+        return super.safeTransferFrom(from, to, tokenId);
     }
 
     function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public override {
         int64 responseCode = HtsPrecompile.preTransfer(msg.sender, from, to, tokenId);
-        if (responseCode == HederaResponseCodes.SUCCESS) {
-            return super.safeTransferFrom(from, to, tokenId, data);
-        } else {
+        if (responseCode != HederaResponseCodes.SUCCESS) {
             revert HtsPrecompileError(responseCode);
         }
+        return super.safeTransferFrom(from, to, tokenId, data);
     }
 
     // Additional(not in IHederaTokenService or in IERC721) public/external view functions:
