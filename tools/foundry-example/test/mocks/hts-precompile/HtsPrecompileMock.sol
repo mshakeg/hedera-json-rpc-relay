@@ -463,8 +463,9 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         address spender = spender; // TODO: investigate if Hedera also considers tx.origin as a possible spender
         if (commonPrecheckData.isFungible) {
             (, uint256 spenderAllowance) = allowance(token, from, spender);
+            // TODO: do validation for other allowance response codes such as SPENDER_DOES_NOT_HAVE_ALLOWANCE and MAX_ALLOWANCES_EXCEEDED
             if (spenderAllowance < amountOrSerialNumber) {
-                return (HederaResponseCodes.INSUFFICIENT_ACCOUNT_BALANCE, false); // TODO: investigate if this response code is suitable for insufficient allowance
+                return (HederaResponseCodes.AMOUNT_EXCEEDS_ALLOWANCE, false);
             }
         } else {
             bool canSpendToken = HederaNonFungibleToken(token).isApprovedOrOwner(spender, amountOrSerialNumber);
