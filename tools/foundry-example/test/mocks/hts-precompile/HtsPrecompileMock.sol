@@ -638,6 +638,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         return (HederaResponseCodes.SUCCESS, tokenInfo);
     }
 
+    /// TODO: investigate difference between the following function and function getKey(address token, KeyHelper.KeyType keyType) public view
     function getTokenKey(address token, uint keyType) external view returns (int64 responseCode, KeyValue memory key) {
         if (!_isToken(token)) {
             return (HederaResponseCodes.INVALID_TOKEN_ID, key);
@@ -1297,5 +1298,9 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     // Additional(not in IHederaTokenService) public/external state-changing functions:
     function isAssociated(address account, address token) external view returns (bool associated) {
         associated = _association[token][account];
+    }
+
+    function getTreasuryAccount(address token) external view returns (address treasury) {
+        return _getTreasuryAccount(token);
     }
 }
