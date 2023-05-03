@@ -327,10 +327,6 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
             expectedResponseCode: HederaResponseCodes.SUCCESS // assume SUCCESS and overwrite with !SUCCESS where applicable
         });
 
-        if (!transferChecks.isRecipientAssociated) {
-            transferChecks.expectedResponseCode = HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT;
-        }
-
         TransferInfo memory preTransferInfo = TransferInfo({
             spenderAllowance: hederaFungibleToken.allowance(transferParams.from, transferParams.sender),
             fromBalance: hederaFungibleToken.balanceOf(transferParams.from),
@@ -347,6 +343,10 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
             if (preTransferInfo.spenderAllowance < transferParams.amount) {
                 transferChecks.expectedResponseCode = HederaResponseCodes.AMOUNT_EXCEEDS_ALLOWANCE;
             }
+        }
+
+        if (!transferChecks.isRecipientAssociated) {
+            transferChecks.expectedResponseCode = HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT;
         }
 
         if (transferChecks.expectedResponseCode != HederaResponseCodes.SUCCESS) {
@@ -605,93 +605,48 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
         assertEq(success, true, 'expected transfer to succeed');
     }
 
-    function test_TransferUsingAllowanceDirectly() public setPranker(alice) {
+    function test_TransferUsingAllowanceDirectly() public {
+        address sender = alice;
+        string memory name = 'Token A';
+        string memory symbol = 'TA';
+        address treasury = alice;
         int64 initialTotalSupply = 1e16;
-        uint initialTotalSupplyU256 = uint64(initialTotalSupply);
         int32 decimals = 8;
-        IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo = _getSimpleHederaFungibleTokenInfo(
-            'Token A',
-            'TA',
-            alice,
+
+        address tokenAddress = _doCreateHederaFungibleTokenDirectly(
+            sender,
+            name,
+            symbol,
+            treasury,
             initialTotalSupply,
             decimals
         );
 
-        IHederaTokenService.HederaToken memory token = fungibleTokenInfo.tokenInfo.token;
+        bool success;
+        uint256 amount = 1e8;
 
-        /// @dev no need to register newly created HederaFungibleToken in this context as the constructor will call HtsPrecompileMock#registerHederaFungibleToken
-        HederaFungibleToken hederaFungibleToken = new HederaFungibleToken(fungibleTokenInfo);
-        address tokenAddress = address(hederaFungibleToken);
-
-        uint allowanceForBob = 1e8;
-
-        uint allowanceBob = hederaFungibleToken.allowance(alice, bob);
-
-        vm.stopPrank();
-
-        vm.prank(bob);
-        int64 responseCode = htsPrecompile.associateToken(bob, tokenAddress);
-        assertEq(responseCode, HederaResponseCodes.SUCCESS, 'expected bob to associate with token');
-        assertEq(htsPrecompile.isAssociated(bob, tokenAddress), true, 'expected bob to be associated with token');
-
-        vm.prank(carol);
-        responseCode = htsPrecompile.associateToken(carol, tokenAddress);
-        assertEq(responseCode, HederaResponseCodes.SUCCESS, 'expected carol to associate with token');
-        assertEq(htsPrecompile.isAssociated(carol, tokenAddress), true, 'expected carol to be associated with token');
-
-        vm.startPrank(alice);
-
-        responseCode = htsPrecompile.approve(tokenAddress, bob, allowanceForBob);
-
-        assertEq(
-            responseCode,
-            HederaResponseCodes.SUCCESS,
-            "expected bob to be given token allowance to alice's account"
-        );
-
-        allowanceBob = hederaFungibleToken.allowance(alice, bob);
-
-        assertEq(allowanceBob, allowanceForBob, "bob's expected allowance not set correctly");
-
-        vm.stopPrank();
-        vm.startPrank(bob);
-
-        uint transferToCarolUsingAllowance = allowanceForBob + 1; // 1 unit too much for bob's allowance
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                HederaFungibleToken.HtsPrecompileError.selector,
-                HederaResponseCodes.INSUFFICIENT_ACCOUNT_BALANCE
-            )
-        );
-        hederaFungibleToken.transferFrom(alice, carol, transferToCarolUsingAllowance);
-
-        transferToCarolUsingAllowance = allowanceForBob;
-
-        bool success = hederaFungibleToken.transferFrom(alice, carol, transferToCarolUsingAllowance);
-
-        assertEq(success, true, "expected successful transfer to carol using bob's allowance from alice");
-
-        Balances memory balances = Balances({
-            alice: hederaFungibleToken.balanceOf(alice),
-            bob: hederaFungibleToken.balanceOf(bob),
-            carol: hederaFungibleToken.balanceOf(carol),
-            dave: 0
+        TransferParams memory transferParams = TransferParams({
+            sender: bob,
+            token: tokenAddress,
+            from: alice,
+            to: bob,
+            amount: amount
         });
 
-        allowanceBob = hederaFungibleToken.allowance(alice, bob);
+        (success, ) = _doTransferDirectly(transferParams);
+        assertEq(success, false, 'expected transfer to fail since bob is not associated with token');
 
-        assertEq(
-            balances.alice,
-            initialTotalSupplyU256 - transferToCarolUsingAllowance,
-            'expected alice balance to decrease by transferToCarolUsingAllowance amount'
-        );
-        assertEq(
-            balances.carol,
-            transferToCarolUsingAllowance,
-            'expected carol balance to increase by transferToCarolUsingAllowance amount'
-        );
-        assertEq(allowanceBob, 0, 'expected bob to have 0 allowance after spending all');
+        success = _doAssociateViaHtsPrecompile(bob, tokenAddress);
+        assertEq(success, true, 'expected bob to associate with token');
+
+        (success, ) = _doTransferDirectly(transferParams);
+        assertEq(success, false, 'expected transfer to fail since bob is not granted an allowance');
+
+        uint allowance = 1e8;
+        _doApproveViaHtsPrecompile(alice, tokenAddress, bob, allowance);
+
+        (success, ) = _doTransferDirectly(transferParams);
+        assertEq(success, true, 'expected transfer to succeed');
     }
 
     /// @dev there is no test_CanMintDirectly as the ERC20 standard does not typically allow direct mints
