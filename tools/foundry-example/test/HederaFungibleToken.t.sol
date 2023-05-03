@@ -119,7 +119,8 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
         string memory symbol,
         address treasury,
         int64 initialTotalSupply,
-        int32 decimals
+        int32 decimals,
+        IHederaTokenService.TokenKey[] memory keys
     ) internal setPranker(sender) returns (address tokenAddress) {
         IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo = _getSimpleHederaFungibleTokenInfo(
             name,
@@ -128,6 +129,8 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
             initialTotalSupply,
             decimals
         );
+
+        fungibleTokenInfo.tokenInfo.token.tokenKeys = keys;
 
         IHederaTokenService.HederaToken memory token = fungibleTokenInfo.tokenInfo.token;
 
@@ -414,6 +417,12 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
         }
     }
 
+    function _doMintViaHtsPrecompile(address sender, address token) internal setPranker(sender) returns (bool success) {
+
+        bytes[] memory NULL_BYTES = new bytes[](1);
+
+    }
+
     modifier setPranker(address pranker) {
         vm.startPrank(pranker);
         _;
@@ -440,7 +449,9 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
         int64 initialTotalSupply = 1e16;
         int32 decimals = 8;
 
-        _doCreateHederaFungibleTokenDirectly(sender, name, symbol, treasury, initialTotalSupply, decimals);
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](0);
+
+        _doCreateHederaFungibleTokenDirectly(sender, name, symbol, treasury, initialTotalSupply, decimals, keys);
     }
 
     function test_ApproveViaHtsPrecompile() public {
@@ -451,13 +462,16 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
         int64 initialTotalSupply = 1e16;
         int32 decimals = 8;
 
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](0);
+
         address tokenAddress = _doCreateHederaFungibleTokenDirectly(
             sender,
             name,
             symbol,
             treasury,
             initialTotalSupply,
-            decimals
+            decimals,
+            keys
         );
 
         uint allowance = 1e8;
@@ -472,13 +486,16 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
         int64 initialTotalSupply = 1e16;
         int32 decimals = 8;
 
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](0);
+
         address tokenAddress = _doCreateHederaFungibleTokenDirectly(
             sender,
             name,
             symbol,
             treasury,
             initialTotalSupply,
-            decimals
+            decimals,
+            keys
         );
 
         uint allowance = 1e8;
@@ -493,13 +510,16 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
         int64 initialTotalSupply = 1e16;
         int32 decimals = 8;
 
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](0);
+
         address tokenAddress = _doCreateHederaFungibleTokenDirectly(
             sender,
             name,
             symbol,
             treasury,
             initialTotalSupply,
-            decimals
+            decimals,
+            keys
         );
 
         bool success;
@@ -531,13 +551,16 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
         int64 initialTotalSupply = 1e16;
         int32 decimals = 8;
 
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](0);
+
         address tokenAddress = _doCreateHederaFungibleTokenDirectly(
             sender,
             name,
             symbol,
             treasury,
             initialTotalSupply,
-            decimals
+            decimals,
+            keys
         );
 
         bool success;
@@ -569,13 +592,16 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
         int64 initialTotalSupply = 1e16;
         int32 decimals = 8;
 
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](0);
+
         address tokenAddress = _doCreateHederaFungibleTokenDirectly(
             sender,
             name,
             symbol,
             treasury,
             initialTotalSupply,
-            decimals
+            decimals,
+            keys
         );
 
         bool success;
@@ -613,13 +639,16 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
         int64 initialTotalSupply = 1e16;
         int32 decimals = 8;
 
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](0);
+
         address tokenAddress = _doCreateHederaFungibleTokenDirectly(
             sender,
             name,
             symbol,
             treasury,
             initialTotalSupply,
-            decimals
+            decimals,
+            keys
         );
 
         bool success;
