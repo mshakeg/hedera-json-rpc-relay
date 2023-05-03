@@ -310,6 +310,104 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
         }
     }
 
+    function _doTransferDirectly(
+        TransferParams memory transferParams
+    ) internal setPranker(transferParams.sender) returns (bool success, int64 responseCode) {
+        HederaFungibleToken hederaFungibleToken = HederaFungibleToken(transferParams.token);
+
+        TransferChecks memory transferChecks = TransferChecks({
+            isRecipientAssociated: htsPrecompile.isAssociated(transferParams.to, transferParams.token),
+            isRequestFromOwner: transferParams.sender == transferParams.from,
+            expectedResponseCode: HederaResponseCodes.SUCCESS // assume SUCCESS and overwrite with !SUCCESS where applicable
+        });
+
+        if (!transferChecks.isRecipientAssociated) {
+            transferChecks.expectedResponseCode = HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT;
+        }
+
+        TransferInfo memory preTransferInfo = TransferInfo({
+            spenderAllowance: hederaFungibleToken.allowance(transferParams.from, transferParams.sender),
+            fromBalance: hederaFungibleToken.balanceOf(transferParams.from),
+            toBalance: hederaFungibleToken.balanceOf(transferParams.to)
+        });
+
+        if (transferChecks.isRequestFromOwner) {
+            if (preTransferInfo.fromBalance < transferParams.amount) {
+                transferChecks.expectedResponseCode = HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
+            }
+        }
+
+        if (!transferChecks.isRequestFromOwner) {
+            if (preTransferInfo.spenderAllowance < transferParams.amount) {
+                transferChecks.expectedResponseCode = HederaResponseCodes.AMOUNT_EXCEEDS_ALLOWANCE;
+            }
+        }
+
+        if (transferChecks.expectedResponseCode != HederaResponseCodes.SUCCESS) {
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    HederaFungibleToken.HtsPrecompileError.selector,
+                    transferChecks.expectedResponseCode
+                )
+            );
+        }
+
+        if (transferChecks.isRequestFromOwner) {
+            hederaFungibleToken.transfer(
+                transferParams.to,
+                transferParams.amount
+            );
+        }
+
+        if (!transferChecks.isRequestFromOwner) {
+            hederaFungibleToken.transferFrom(transferParams.from, transferParams.to, transferParams.amount);
+        }
+
+        if (transferChecks.expectedResponseCode == HederaResponseCodes.SUCCESS) {
+            success = true;
+        }
+
+        TransferInfo memory postTransferInfo = TransferInfo({
+            spenderAllowance: hederaFungibleToken.allowance(transferParams.from, transferParams.sender),
+            fromBalance: hederaFungibleToken.balanceOf(transferParams.from),
+            toBalance: hederaFungibleToken.balanceOf(transferParams.to)
+        });
+
+        if (success) {
+            assertEq(
+                preTransferInfo.toBalance + transferParams.amount,
+                postTransferInfo.toBalance,
+                'to balance did not update correctly'
+            );
+            assertEq(
+                preTransferInfo.fromBalance - transferParams.amount,
+                postTransferInfo.fromBalance,
+                'from balance did not update correctly'
+            );
+
+            if (!transferChecks.isRequestFromOwner) {
+                assertEq(
+                    preTransferInfo.spenderAllowance - transferParams.amount,
+                    postTransferInfo.spenderAllowance,
+                    'spender allowance did not update correctly'
+                );
+            }
+        }
+
+        if (!success) {
+            assertEq(preTransferInfo.toBalance, postTransferInfo.toBalance, 'to balance changed unexpectedly');
+            assertEq(preTransferInfo.fromBalance, postTransferInfo.fromBalance, 'from balance changed unexpectedly');
+
+            if (!transferChecks.isRequestFromOwner) {
+                assertEq(
+                    preTransferInfo.spenderAllowance,
+                    postTransferInfo.spenderAllowance,
+                    'spender allowance changed unexpectedly'
+                );
+            }
+        }
+    }
+
     modifier setPranker(address pranker) {
         vm.startPrank(pranker);
         _;
@@ -419,67 +517,42 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
         assertEq(success, true, 'expected transfer to succeed');
     }
 
-    function test_TransferDirectly() public setPranker(alice) {
+    function test_TransferDirectly() public {
+        address sender = alice;
+        string memory name = 'Token A';
+        string memory symbol = 'TA';
+        address treasury = alice;
         int64 initialTotalSupply = 1e16;
-        uint initialTotalSupplyU256 = uint64(initialTotalSupply);
         int32 decimals = 8;
-        IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo = _getSimpleHederaFungibleTokenInfo(
-            'Token A',
-            'TA',
-            alice,
+
+        address tokenAddress = _doCreateHederaFungibleTokenDirectly(
+            sender,
+            name,
+            symbol,
+            treasury,
             initialTotalSupply,
             decimals
         );
 
-        IHederaTokenService.HederaToken memory token = fungibleTokenInfo.tokenInfo.token;
+        bool success;
+        uint256 amount = 1e8;
 
-        /// @dev no need to register newly created HederaFungibleToken in this context as the constructor will call HtsPrecompileMock#registerHederaFungibleToken
-        HederaFungibleToken hederaFungibleToken = new HederaFungibleToken(fungibleTokenInfo);
-        address tokenAddress = address(hederaFungibleToken);
+        TransferParams memory transferParams = TransferParams({
+            sender: alice,
+            token: tokenAddress,
+            from: alice,
+            to: bob,
+            amount: amount
+        });
 
-        uint transferToBob = 1e8;
+        (success, ) = _doTransferDirectly(transferParams);
+        assertEq(success, false, 'expected transfer to fail since recipient is not associated with token');
 
-        uint balanceAlice = hederaFungibleToken.balanceOf(alice);
-        uint balanceBob = hederaFungibleToken.balanceOf(bob);
+        success = _doAssociateViaHtsPrecompile(bob, tokenAddress);
+        assertEq(success, true, 'expected bob to associate with token');
 
-        assertEq(
-            balanceAlice,
-            initialTotalSupplyU256,
-            'expected alice to have a 0 initialTotalSupply starting balance'
-        );
-        assertEq(balanceBob, 0, 'expected bob to have a 0 starting balance');
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                HederaFungibleToken.HtsPrecompileError.selector,
-                HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT
-            )
-        );
-        hederaFungibleToken.transfer(bob, transferToBob);
-
-        vm.stopPrank();
-        vm.prank(bob);
-
-        int64 responseCode = htsPrecompile.associateToken(bob, tokenAddress);
-        assertEq(responseCode, HederaResponseCodes.SUCCESS, 'expected bob to associate with token');
-
-        assertEq(htsPrecompile.isAssociated(bob, tokenAddress), true, 'expected bob to be associated with token');
-
-        vm.startPrank(alice);
-
-        bool success = hederaFungibleToken.transfer(bob, transferToBob);
-
-        assertEq(success, true, 'expected successful transfer to bob from alice');
-
-        balanceAlice = hederaFungibleToken.balanceOf(alice);
-        balanceBob = hederaFungibleToken.balanceOf(bob);
-
-        assertEq(
-            balanceAlice,
-            initialTotalSupplyU256 - transferToBob,
-            'expected alice balance to decrease by transferToBob amount'
-        );
-        assertEq(balanceBob, transferToBob, 'expected bob balance to increase by transferToBob amount');
+        (success, ) = _doTransferDirectly(transferParams);
+        assertEq(success, true, 'expected transfer to succeed');
     }
 
     function test_TransferUsingAllowanceViaHtsPrecompile() public setPranker(alice) {
