@@ -16,6 +16,8 @@ import './mocks/hts-precompile/HtsPrecompileMock.sol';
 // TODO: do validations in _precheck functions such that never reverts with error strings in ERC{20/721}
 // TODO: investigate ordering of response codes on Hedera and adjust ordering in mocks accordingly
 // TODO: investigate permissions that tx.origin is granted in precompile mock and adjust authorization accordingly if required
+// TODO: test all token keys
+// TODO: evaluate code coverage of all tests
 
 contract HederaFungibleTokenTest is Test, KeyHelper {
     address alice = vm.addr(1);
@@ -495,6 +497,66 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
 
     }
 
+    struct BurnInfo {
+        uint256 totalSupply;
+        uint256 treasuryBalance;
+    }
+
+    function _doBurnViaHtsPrecompile(address sender, address token, int64 burnAmount) internal setPranker(sender) returns (bool success, int64 responseCode) {
+
+        uint256 burnAmountU256 = uint64(burnAmount);
+
+        HederaFungibleToken hederaFungibleToken = HederaFungibleToken(token);
+
+        bytes[] memory NULL_BYTES = new bytes[](1);
+
+        int64 newTotalSupply;
+        int64[] memory serialNumbers;
+
+        int64 expectedResponseCode = HederaResponseCodes.SUCCESS; // assume SUCCESS initially and later overwrite error code accordingly
+
+        address treasury = htsPrecompile.getTreasuryAccount(token);
+
+        BurnInfo memory preBurnInfo = BurnInfo({
+            totalSupply: hederaFungibleToken.totalSupply(),
+            treasuryBalance: hederaFungibleToken.balanceOf(treasury)
+        });
+
+        if (treasury != sender) {
+            expectedResponseCode = HederaResponseCodes.AUTHORIZATION_FAILED;
+        }
+
+        (responseCode, newTotalSupply) = htsPrecompile.burnToken(token, burnAmount, serialNumbers);
+
+        assertEq(
+            expectedResponseCode,
+            responseCode,
+            'expected response code does not equal actual response code'
+        );
+
+        success = responseCode == HederaResponseCodes.SUCCESS;
+
+        BurnInfo memory postBurnInfo = BurnInfo({
+            totalSupply: hederaFungibleToken.totalSupply(),
+            treasuryBalance: hederaFungibleToken.balanceOf(treasury)
+        });
+
+        if (success) {
+
+            assertEq(preBurnInfo.totalSupply - burnAmountU256, postBurnInfo.totalSupply, "expected total supply to decrease by burn amount");
+            assertEq(preBurnInfo.treasuryBalance - burnAmountU256, postBurnInfo.treasuryBalance, "expected treasury balance to decrease by burn amount");
+
+        }
+
+        if (!success) {
+
+            assertEq(preBurnInfo.totalSupply, postBurnInfo.totalSupply, "expected total supply to not change if failed");
+            assertEq(preBurnInfo.treasuryBalance, postBurnInfo.treasuryBalance, "expected treasury balance to not change if failed");
+
+        }
+
+    }
+
     modifier setPranker(address pranker) {
         vm.startPrank(pranker);
         _;
@@ -785,66 +847,36 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
     }
 
     /// @dev there is no test_CanBurnDirectly as the ERC20 standard does not typically allow direct burns
-    function test_CanBurnViaHtsPrecompile() public setPranker(alice) {
-        bytes[] memory NULL_BYTES = new bytes[](1);
+    function test_CanBurnViaHtsPrecompile() public {
 
+        address sender = alice;
+        string memory name = 'Token A';
+        string memory symbol = 'TA';
+        address treasury = alice;
         int64 initialTotalSupply = 1e16;
-        uint initialTotalSupplyU256 = uint64(initialTotalSupply);
+        int32 decimals = 8;
 
-        IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo = _getSimpleHederaFungibleTokenInfo(
-            'Token A',
-            'TA',
-            alice,
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](0);
+
+        address tokenAddress = _doCreateHederaFungibleTokenDirectly(
+            sender,
+            name,
+            symbol,
+            treasury,
             initialTotalSupply,
-            8
+            decimals,
+            keys
         );
 
-        IHederaTokenService.HederaToken memory token = fungibleTokenInfo.tokenInfo.token;
+        bool success;
 
-        /// @dev no need to register newly created HederaFungibleToken in this context as the constructor will call HtsPrecompileMock#registerHederaFungibleToken
-        HederaFungibleToken hederaFungibleToken = new HederaFungibleToken(fungibleTokenInfo);
-        address tokenAddress = address(hederaFungibleToken);
+        int64 burnAmount = 1e8;
 
-        vm.stopPrank();
+        (success, ) = _doBurnViaHtsPrecompile(bob, tokenAddress, burnAmount);
+        assertEq(success, false, "expected burn to fail since bob is not treasury");
 
-        vm.prank(bob);
-        int64 responseCode = htsPrecompile.associateToken(bob, tokenAddress);
-        assertEq(responseCode, HederaResponseCodes.SUCCESS, 'expected bob to associate with token');
-        assertEq(htsPrecompile.isAssociated(bob, tokenAddress), true, 'expected bob to be associated with token');
-
-        {
-            Numbers memory burnAmounts = Numbers({numU256: 1e8, numI64: int64(int(1e8))});
-
-            int64 newTotalSupply;
-            int64[] memory serialNumbers;
-
-            (responseCode, newTotalSupply) = htsPrecompile.burnToken(tokenAddress, burnAmounts.numI64, serialNumbers);
-            assertEq(
-                responseCode,
-                HederaResponseCodes.AUTHORIZATION_FAILED,
-                'expected burn to fail since bob is not treasury'
-            );
-
-            vm.startPrank(alice);
-
-            (responseCode, newTotalSupply) = htsPrecompile.burnToken(tokenAddress, burnAmounts.numI64, serialNumbers);
-
-            assertEq(responseCode, HederaResponseCodes.SUCCESS, 'expected success since alice is treasury');
-
-            Balances memory balances = Balances({
-                alice: hederaFungibleToken.balanceOf(alice),
-                bob: hederaFungibleToken.balanceOf(bob),
-                carol: 0,
-                dave: 0
-            });
-
-            assertEq(
-                balances.alice,
-                initialTotalSupplyU256 - burnAmounts.numU256,
-                'expected alice balance to decrease by burnAmount'
-            );
-            assertEq(balances.bob, 0, 'expected bob to still have 0 balance');
-        }
+        (success, ) = _doBurnViaHtsPrecompile(alice, tokenAddress, burnAmount);
+        assertEq(success, true, "expected mint to succeed");
     }
 
     // negative cases
@@ -859,5 +891,5 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
     }
 }
 
-// forge test --match-contract HederaFungibleTokenTest --match-test test_ApproveViaHtsPrecompile -vv
+// forge test --match-contract HederaFungibleTokenTest --match-test test_CanBurnViaHtsPrecompile -vv
 // forge test --match-contract HederaFungibleTokenTest -vv
