@@ -71,24 +71,20 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
         fungibleTokenInfo.tokenInfo = tokenInfo;
     }
 
-    modifier setPranker(address pranker) {
-        vm.startPrank(pranker);
-        _;
-        vm.stopPrank();
-    }
-
-    // positive cases
-    function test_CreateHederaFungibleTokenViaHtsPrecompile() public setPranker(alice) {
-        (, bool isToken) = htsPrecompile.isToken(address(0x123));
+    function _doCreateHederaFungibleTokenViaHtsPrecompile(
+        address sender,
+        string memory name,
+        string memory symbol,
+        address treasury,
+        int64 initialTotalSupply,
+        int32 decimals
+    ) internal setPranker(sender) returns (address tokenAddress) {
+        bool isToken;
         assertTrue(isToken == false);
-        IHederaTokenService.HederaToken memory token = _getSimpleHederaToken('Token A', 'TA', alice);
-        int64 initialTotalSupply = 1e16;
-        int32 decimals = 8;
-        (int64 responseCode, address tokenAddress) = htsPrecompile.createFungibleToken(
-            token,
-            initialTotalSupply,
-            decimals
-        );
+        IHederaTokenService.HederaToken memory token = _getSimpleHederaToken(name, symbol, treasury);
+
+        int64 responseCode;
+        (responseCode, tokenAddress) = htsPrecompile.createFungibleToken(token, initialTotalSupply, decimals);
 
         int32 tokenType;
         (, isToken) = htsPrecompile.isToken(tokenAddress);
@@ -111,12 +107,17 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
         );
     }
 
-    function test_CreateHederaFungibleTokenDirectly() public setPranker(alice) {
-        int64 initialTotalSupply = 1e16;
-        int32 decimals = 8;
+    function _doCreateHederaFungibleTokenDirectly(
+        address sender,
+        string memory name,
+        string memory symbol,
+        address treasury,
+        int64 initialTotalSupply,
+        int32 decimals
+    ) internal setPranker(sender) returns (address tokenAddress) {
         IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo = _getSimpleHederaFungibleTokenInfo(
-            'Token A',
-            'TA',
+            name,
+            symbol,
             alice,
             initialTotalSupply,
             decimals
@@ -126,7 +127,7 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
 
         /// @dev no need to register newly created HederaFungibleToken in this context as the constructor will call HtsPrecompileMock#registerHederaFungibleToken
         HederaFungibleToken hederaFungibleToken = new HederaFungibleToken(fungibleTokenInfo);
-        address tokenAddress = address(hederaFungibleToken);
+        tokenAddress = address(hederaFungibleToken);
 
         (int64 responseCode, int32 tokenType) = htsPrecompile.getTokenType(tokenAddress);
 
@@ -143,171 +144,279 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
         );
     }
 
-    function test_ApproveViaHtsPrecompile() public setPranker(alice) {
-        int64 initialTotalSupply = 1e16;
-        int32 decimals = 8;
-        IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo = _getSimpleHederaFungibleTokenInfo(
-            'Token A',
-            'TA',
-            alice,
-            initialTotalSupply,
-            decimals
-        );
+    function _doAssociateViaHtsPrecompile(
+        address sender,
+        address token
+    ) internal setPranker(sender) returns (bool success) {
+        bool isInitiallyAssociated = htsPrecompile.isAssociated(sender, token);
+        int64 responseCode = htsPrecompile.associateToken(sender, token);
+        success = responseCode == HederaResponseCodes.SUCCESS;
 
-        IHederaTokenService.HederaToken memory token = fungibleTokenInfo.tokenInfo.token;
+        int64 expectedResponseCode;
 
-        /// @dev no need to register newly created HederaFungibleToken in this context as the constructor will call HtsPrecompileMock#registerHederaFungibleToken
-        HederaFungibleToken hederaFungibleToken = new HederaFungibleToken(fungibleTokenInfo);
-        address tokenAddress = address(hederaFungibleToken);
+        if (isInitiallyAssociated) {
+            expectedResponseCode = HederaResponseCodes.TOKEN_ALREADY_ASSOCIATED_TO_ACCOUNT;
+        }
 
-        uint allowanceForBob = 1e8;
+        if (!isInitiallyAssociated) {
+            expectedResponseCode = HederaResponseCodes.SUCCESS;
+        }
 
-        uint allowanceBob = hederaFungibleToken.allowance(alice, bob);
+        bool isFinallyAssociated = htsPrecompile.isAssociated(sender, token);
 
-        assertEq(allowanceBob, 0, 'expected bob to have a 0 starting allowance');
+        assertEq(responseCode, expectedResponseCode, 'expected response code does not match actual response code');
+    }
 
-        int64 responseCode = htsPrecompile.approve(tokenAddress, bob, allowanceForBob);
-
-        assertEq(
-            responseCode,
-            HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT,
-            'expected to not approve due to bob not being associated'
-        );
-
-        vm.stopPrank();
-        vm.prank(bob);
-
-        responseCode = htsPrecompile.associateToken(bob, tokenAddress);
-        assertEq(responseCode, HederaResponseCodes.SUCCESS, 'expected bob to associate with token');
-
-        assertEq(htsPrecompile.isAssociated(bob, tokenAddress), true, 'expected bob to be associated with token');
-
-        vm.startPrank(alice);
-
-        responseCode = htsPrecompile.approve(tokenAddress, bob, allowanceForBob);
-
+    function _doApproveViaHtsPrecompile(
+        address sender,
+        address token,
+        address spender,
+        uint allowance
+    ) internal setPranker(sender) returns (bool success) {
+        HederaFungibleToken hederaFungibleToken = HederaFungibleToken(token);
+        uint spenderStartingAllowance = hederaFungibleToken.allowance(sender, spender);
+        int64 responseCode = htsPrecompile.approve(token, bob, allowance);
         assertEq(
             responseCode,
             HederaResponseCodes.SUCCESS,
-            "expected bob to be given token allowance to alice's account"
+            "expected spender to be given token allowance to sender's account"
         );
 
-        allowanceBob = hederaFungibleToken.allowance(alice, bob);
+        uint spenderFinalAllowance = hederaFungibleToken.allowance(sender, spender);
 
-        assertEq(allowanceBob, allowanceForBob, "bob's expected allowance not set correctly");
+        assertEq(spenderFinalAllowance, allowance, "spender's expected allowance not set correctly");
     }
 
-    function test_ApproveDirectly() public setPranker(alice) {
-        int64 initialTotalSupply = 1e16;
-        int32 decimals = 8;
-        IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo = _getSimpleHederaFungibleTokenInfo(
-            'Token A',
-            'TA',
-            alice,
-            initialTotalSupply,
-            decimals
-        );
-
-        IHederaTokenService.HederaToken memory token = fungibleTokenInfo.tokenInfo.token;
-
-        /// @dev no need to register newly created HederaFungibleToken in this context as the constructor will call HtsPrecompileMock#registerHederaFungibleToken
-        HederaFungibleToken hederaFungibleToken = new HederaFungibleToken(fungibleTokenInfo);
-        address tokenAddress = address(hederaFungibleToken);
-
-        uint allowanceForBob = 1e8;
-
-        uint allowanceBob = hederaFungibleToken.allowance(alice, bob);
-
-        assertEq(allowanceBob, 0, 'expected bob to have a 0 starting allowance');
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                HederaFungibleToken.HtsPrecompileError.selector,
-                HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT
-            )
-        );
-        hederaFungibleToken.approve(bob, allowanceForBob);
-
-        vm.stopPrank();
-        vm.prank(bob);
-
-        int64 responseCode = htsPrecompile.associateToken(bob, tokenAddress);
-        assertEq(responseCode, HederaResponseCodes.SUCCESS, 'expected bob to associate with token');
-
-        assertEq(htsPrecompile.isAssociated(bob, tokenAddress), true, 'expected bob to be associated with token');
-
-        vm.startPrank(alice);
-
-        bool success = hederaFungibleToken.approve(bob, allowanceForBob);
-
-        assertEq(success, true, "expected bob to be given token allowance to alice's account");
-
-        allowanceBob = hederaFungibleToken.allowance(alice, bob);
-
-        assertEq(allowanceBob, allowanceForBob, "bob's expected allowance not set correctly");
+    function _doApproveDirectly(
+        address sender,
+        address token,
+        address spender,
+        uint allowance
+    ) internal setPranker(sender) returns (bool success) {
+        HederaFungibleToken hederaFungibleToken = HederaFungibleToken(token);
+        uint spenderStartingAllowance = hederaFungibleToken.allowance(sender, spender);
+        success = hederaFungibleToken.approve(spender, allowance);
+        assertEq(success, true, 'expected successful approval');
+        uint spenderFinalAllowance = hederaFungibleToken.allowance(sender, spender);
+        assertEq(spenderFinalAllowance, allowance, "spender's expected allowance not set correctly");
     }
 
-    function test_TransferViaHtsPrecompile() public setPranker(alice) {
-        int64 initialTotalSupply = 1e16;
-        uint initialTotalSupplyU256 = uint64(initialTotalSupply);
-        int32 decimals = 8;
-        IHederaTokenService.FungibleTokenInfo memory fungibleTokenInfo = _getSimpleHederaFungibleTokenInfo(
-            'Token A',
-            'TA',
-            alice,
-            initialTotalSupply,
-            decimals
+    struct TransferParams {
+        address sender;
+        address token;
+        address from;
+        address to;
+        uint256 amount;
+    }
+
+    struct TransferInfo {
+        uint256 spenderAllowance;
+        uint256 fromBalance;
+        uint256 toBalance;
+    }
+
+    struct TransferChecks {
+        bool isRecipientAssociated;
+        bool isRequestFromOwner;
+        int64 expectedResponseCode;
+    }
+
+    function _doTransferViaHtsPrecompile(
+        TransferParams memory transferParams
+    ) internal setPranker(transferParams.sender) returns (bool success, int64 responseCode) {
+        HederaFungibleToken hederaFungibleToken = HederaFungibleToken(transferParams.token);
+
+        TransferChecks memory transferChecks = TransferChecks({
+            isRecipientAssociated: htsPrecompile.isAssociated(transferParams.to, transferParams.token),
+            isRequestFromOwner: transferParams.sender == transferParams.from,
+            expectedResponseCode: HederaResponseCodes.SUCCESS // assume SUCCESS and overwrite with !SUCCESS where applicable
+        });
+
+        if (!transferChecks.isRecipientAssociated) {
+            transferChecks.expectedResponseCode = HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT;
+        }
+
+        TransferInfo memory preTransferInfo = TransferInfo({
+            spenderAllowance: hederaFungibleToken.allowance(transferParams.from, transferParams.sender),
+            fromBalance: hederaFungibleToken.balanceOf(transferParams.from),
+            toBalance: hederaFungibleToken.balanceOf(transferParams.to)
+        });
+
+        if (transferChecks.isRequestFromOwner) {
+            if (preTransferInfo.fromBalance < transferParams.amount) {
+                transferChecks.expectedResponseCode = HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
+            }
+        }
+
+        if (!transferChecks.isRequestFromOwner) {
+            if (preTransferInfo.spenderAllowance < transferParams.amount) {
+                transferChecks.expectedResponseCode = HederaResponseCodes.AMOUNT_EXCEEDS_ALLOWANCE;
+            }
+        }
+
+        responseCode = htsPrecompile.transferFrom(
+            transferParams.token,
+            transferParams.from,
+            transferParams.to,
+            transferParams.amount
         );
 
-        IHederaTokenService.HederaToken memory token = fungibleTokenInfo.tokenInfo.token;
-
-        /// @dev no need to register newly created HederaFungibleToken in this context as the constructor will call HtsPrecompileMock#registerHederaFungibleToken
-        HederaFungibleToken hederaFungibleToken = new HederaFungibleToken(fungibleTokenInfo);
-        address tokenAddress = address(hederaFungibleToken);
-
-        uint transferToBob = 1e8;
-
-        uint balanceAlice = hederaFungibleToken.balanceOf(alice);
-        uint balanceBob = hederaFungibleToken.balanceOf(bob);
-
         assertEq(
-            balanceAlice,
-            initialTotalSupplyU256,
-            'expected alice to have a 0 initialTotalSupply starting balance'
-        );
-        assertEq(balanceBob, 0, 'expected bob to have a 0 starting balance');
-
-        int64 responseCode = htsPrecompile.transferFrom(tokenAddress, alice, bob, transferToBob);
-
-        assertEq(
+            transferChecks.expectedResponseCode,
             responseCode,
-            HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT,
-            'expected to not transfer due to bob not being associated'
+            'expected response code does not equal actual response code'
         );
 
+        success = responseCode == HederaResponseCodes.SUCCESS;
+
+        TransferInfo memory postTransferInfo = TransferInfo({
+            spenderAllowance: hederaFungibleToken.allowance(transferParams.from, transferParams.sender),
+            fromBalance: hederaFungibleToken.balanceOf(transferParams.from),
+            toBalance: hederaFungibleToken.balanceOf(transferParams.to)
+        });
+
+        if (success) {
+            assertEq(
+                preTransferInfo.toBalance + transferParams.amount,
+                postTransferInfo.toBalance,
+                'to balance did not update correctly'
+            );
+            assertEq(
+                preTransferInfo.fromBalance - transferParams.amount,
+                postTransferInfo.fromBalance,
+                'from balance did not update correctly'
+            );
+
+            if (!transferChecks.isRequestFromOwner) {
+                assertEq(
+                    preTransferInfo.spenderAllowance - transferParams.amount,
+                    postTransferInfo.spenderAllowance,
+                    'spender allowance did not update correctly'
+                );
+            }
+        }
+
+        if (!success) {
+            assertEq(preTransferInfo.toBalance, postTransferInfo.toBalance, 'to balance changed unexpectedly');
+            assertEq(preTransferInfo.fromBalance, postTransferInfo.fromBalance, 'from balance changed unexpectedly');
+
+            if (!transferChecks.isRequestFromOwner) {
+                assertEq(
+                    preTransferInfo.spenderAllowance,
+                    postTransferInfo.spenderAllowance,
+                    'spender allowance changed unexpectedly'
+                );
+            }
+        }
+    }
+
+    modifier setPranker(address pranker) {
+        vm.startPrank(pranker);
+        _;
         vm.stopPrank();
-        vm.prank(bob);
+    }
 
-        responseCode = htsPrecompile.associateToken(bob, tokenAddress);
-        assertEq(responseCode, HederaResponseCodes.SUCCESS, 'expected bob to associate with token');
+    // positive cases
+    function test_CreateHederaFungibleTokenViaHtsPrecompile() public {
+        address sender = alice;
+        string memory name = 'Token A';
+        string memory symbol = 'TA';
+        address treasury = alice;
+        int64 initialTotalSupply = 1e16;
+        int32 decimals = 8;
 
-        assertEq(htsPrecompile.isAssociated(bob, tokenAddress), true, 'expected bob to be associated with token');
+        _doCreateHederaFungibleTokenViaHtsPrecompile(sender, name, symbol, treasury, initialTotalSupply, decimals);
+    }
 
-        vm.startPrank(alice);
+    function test_CreateHederaFungibleTokenDirectly() public {
+        address sender = alice;
+        string memory name = 'Token A';
+        string memory symbol = 'TA';
+        address treasury = alice;
+        int64 initialTotalSupply = 1e16;
+        int32 decimals = 8;
 
-        responseCode = htsPrecompile.transferFrom(tokenAddress, alice, bob, transferToBob);
+        _doCreateHederaFungibleTokenDirectly(sender, name, symbol, treasury, initialTotalSupply, decimals);
+    }
 
-        assertEq(responseCode, HederaResponseCodes.SUCCESS, 'expected successful transfer to bob from alice');
+    function test_ApproveViaHtsPrecompile() public {
+        address sender = alice;
+        string memory name = 'Token A';
+        string memory symbol = 'TA';
+        address treasury = alice;
+        int64 initialTotalSupply = 1e16;
+        int32 decimals = 8;
 
-        balanceAlice = hederaFungibleToken.balanceOf(alice);
-        balanceBob = hederaFungibleToken.balanceOf(bob);
-
-        assertEq(
-            balanceAlice,
-            initialTotalSupplyU256 - transferToBob,
-            'expected alice balance to decrease by transferToBob amount'
+        address tokenAddress = _doCreateHederaFungibleTokenDirectly(
+            sender,
+            name,
+            symbol,
+            treasury,
+            initialTotalSupply,
+            decimals
         );
-        assertEq(balanceBob, transferToBob, 'expected bob balance to increase by transferToBob amount');
+
+        uint allowance = 1e8;
+        _doApproveViaHtsPrecompile(alice, tokenAddress, bob, allowance);
+    }
+
+    function test_ApproveDirectly() public {
+        address sender = alice;
+        string memory name = 'Token A';
+        string memory symbol = 'TA';
+        address treasury = alice;
+        int64 initialTotalSupply = 1e16;
+        int32 decimals = 8;
+
+        address tokenAddress = _doCreateHederaFungibleTokenDirectly(
+            sender,
+            name,
+            symbol,
+            treasury,
+            initialTotalSupply,
+            decimals
+        );
+
+        uint allowance = 1e8;
+        _doApproveDirectly(alice, tokenAddress, bob, allowance);
+    }
+
+    function test_TransferViaHtsPrecompile() public {
+        address sender = alice;
+        string memory name = 'Token A';
+        string memory symbol = 'TA';
+        address treasury = alice;
+        int64 initialTotalSupply = 1e16;
+        int32 decimals = 8;
+
+        address tokenAddress = _doCreateHederaFungibleTokenDirectly(
+            sender,
+            name,
+            symbol,
+            treasury,
+            initialTotalSupply,
+            decimals
+        );
+
+        bool success;
+        uint256 amount = 1e8;
+
+        TransferParams memory transferParams = TransferParams({
+            sender: alice,
+            token: tokenAddress,
+            from: alice,
+            to: bob,
+            amount: amount
+        });
+
+        (success, ) = _doTransferViaHtsPrecompile(transferParams);
+        assertEq(success, false, 'expected transfer to fail since recipient is not associated with token');
+
+        success = _doAssociateViaHtsPrecompile(bob, tokenAddress);
+        assertEq(success, true, 'expected bob to associate with token');
+
+        (success, ) = _doTransferViaHtsPrecompile(transferParams);
+        assertEq(success, true, 'expected transfer to succeed');
     }
 
     function test_TransferDirectly() public setPranker(alice) {

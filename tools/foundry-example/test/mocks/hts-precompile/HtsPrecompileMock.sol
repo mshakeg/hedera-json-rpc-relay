@@ -279,9 +279,11 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     ) internal view returns (int64 responseCode) {
         CommonPrecheckData memory commonPrecheckData = _getCommonPrecheckData(token, spender, owner, ADDRESS_ZERO);
 
-        if (!_association[token][owner] || !_association[token][spender]) {
-            return HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT;
-        }
+        /// @dev Hedera does not require an account to be associated with a token in be approved an allowance
+        // if (!_association[token][owner] || !_association[token][spender]) {
+        //     return HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT;
+        // }
+
         if (!commonPrecheckData.doesAccount1PassUnfrozen || !commonPrecheckData.doesAccount2PassUnfrozen) {
             return HederaResponseCodes.ACCOUNT_FROZEN_FOR_TOKEN;
         }
