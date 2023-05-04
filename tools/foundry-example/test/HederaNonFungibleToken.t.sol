@@ -33,48 +33,6 @@ contract HederaNonFungibleTokenTest is HederaNonFungibleTokenUtils, KeyHelper {
         vm.deal(dave, 100 ether);
     }
 
-    function _doCreateHederaNonFungibleTokenViaHtsPrecompile(
-        address sender,
-        string memory name,
-        string memory symbol,
-        address treasury
-    ) internal setPranker(sender) returns (bool success, address tokenAddress) {
-
-        int64 expectedResponseCode = HederaResponseCodes.SUCCESS;
-
-        if (sender != treasury) {
-            expectedResponseCode = HederaResponseCodes.AUTHORIZATION_FAILED;
-        }
-
-        IHederaTokenService.HederaToken memory token = _getSimpleHederaToken(name, symbol, treasury);
-        (int64 responseCode, address tokenAddress) = htsPrecompile.createNonFungibleToken(token);
-
-        assertEq(expectedResponseCode, responseCode, "response code does not equal expected response code");
-
-        success = responseCode == HederaResponseCodes.SUCCESS;
-
-        int32 tokenType;
-        bool isToken;
-        (, isToken) = htsPrecompile.isToken(tokenAddress);
-        (responseCode, tokenType) = htsPrecompile.getTokenType(tokenAddress);
-
-        HederaNonFungibleToken hederaNonFungibleToken = HederaNonFungibleToken(tokenAddress);
-
-        assertEq(responseCode, HederaResponseCodes.SUCCESS, 'Failed to createNonFungibleToken');
-
-        assertEq(responseCode, HederaResponseCodes.SUCCESS, 'Did not set is{}Token correctly');
-        assertEq(tokenType, 1, 'Did not set isNonFungible correctly');
-
-        assertEq(token.name, hederaNonFungibleToken.name(), 'Did not set name correctly');
-        assertEq(token.symbol, hederaNonFungibleToken.symbol(), 'Did not set symbol correctly');
-        assertEq(
-            hederaNonFungibleToken.totalSupply(),
-            hederaNonFungibleToken.balanceOf(token.treasury),
-            'Did not mint initial supply to treasury'
-        );
-
-    }
-
     // positive cases
     function test_CreateHederaNonFungibleTokenViaHtsPrecompile() public {
 
@@ -95,32 +53,25 @@ contract HederaNonFungibleTokenTest is HederaNonFungibleTokenUtils, KeyHelper {
 
     }
 
-    function test_CreateHederaNonFungibleTokenDirectly() public setPranker(alice) {
-        IHederaTokenService.TokenInfo memory nftTokenInfo = _getSimpleHederaNftTokenInfo(
-            'NFT A',
-            'NFT-A',
-            alice
-        );
+    function test_CreateHederaNonFungibleTokenDirectly() public {
 
-        IHederaTokenService.HederaToken memory token = nftTokenInfo.token;
+        address sender = alice;
+        string memory name = 'NFT A';
+        string memory symbol = 'NFT-A';
+        address treasury = bob;
 
-        /// @dev no need to register newly created HederaNonFungibleToken in this context as the constructor will call HtsPrecompileMock#registerHederaNonFungibleToken
-        HederaNonFungibleToken hederaNonFungibleToken = new HederaNonFungibleToken(nftTokenInfo);
+        IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](0);
 
-        address tokenAddress = address(hederaNonFungibleToken);
+        bool success;
 
-        (int64 responseCode, int32 tokenType) = htsPrecompile.getTokenType(tokenAddress);
+        (success, ) = _doCreateHederaNonFungibleTokenDirectly(sender, name, symbol, treasury, keys);
+        assertEq(success, false, "expected failure since treasury is not sender");
 
-        assertEq(responseCode, HederaResponseCodes.SUCCESS, 'Did not set is{}Token correctly');
-        assertEq(tokenType, 1, 'Did not set isNonFungible correctly');
+        treasury = alice;
 
-        assertEq(token.name, hederaNonFungibleToken.name(), 'Did not set name correctly');
-        assertEq(token.symbol, hederaNonFungibleToken.symbol(), 'Did not set symbol correctly');
-        assertEq(
-            hederaNonFungibleToken.totalSupply(),
-            hederaNonFungibleToken.balanceOf(token.treasury),
-            'Did not mint initial supply to treasury'
-        );
+        (success, ) = _doCreateHederaNonFungibleTokenDirectly(sender, name, symbol, treasury, keys);
+        assertEq(success, true, "expected success since treasury is sender");
+
     }
 
     function test_ApproveViaHtsPrecompile() public setPranker(alice) {

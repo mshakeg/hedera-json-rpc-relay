@@ -531,7 +531,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         int64 responseCode = doPrecheck ? _preCreateToken(caller, fungibleTokenInfo.tokenInfo.token) : HederaResponseCodes.SUCCESS;
 
         if (responseCode != HederaResponseCodes.SUCCESS) {
-            revert("PRECHECK FAILED"); // TODO: revert with custom error that includes response code
+            revert("PRECHECK_FAILED"); // TODO: revert with custom error that includes response code
         }
 
         address tokenAddress = msg.sender;
@@ -550,15 +550,12 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         int64 responseCode = doPrecheck ? _preCreateToken(caller, nftTokenInfo.token) : HederaResponseCodes.SUCCESS;
 
         if (responseCode != HederaResponseCodes.SUCCESS) {
-            revert("PRECHECK FAILED"); // TODO: revert with custom error that includes response code
+            revert("PRECHECK_FAILED"); // TODO: revert with custom error that includes response code
         }
 
         address tokenAddress = msg.sender;
         _isNonFungible[tokenAddress] = true;
         address treasury = _setNftTokenInfo(nftTokenInfo);
-
-        // TODO: do proper validation on token in _preCreateToken
-        require(treasury != ADDRESS_ZERO, 'treasury == 0');
 
         associateToken(treasury, tokenAddress);
     }

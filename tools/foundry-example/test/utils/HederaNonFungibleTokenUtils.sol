@@ -20,4 +20,106 @@ contract HederaNonFungibleTokenUtils is CommonUtils, HederaTokenUtils {
         tokenInfo.token = token;
     }
 
+    function _doCreateHederaNonFungibleTokenViaHtsPrecompile(
+        address sender,
+        string memory name,
+        string memory symbol,
+        address treasury
+    ) internal setPranker(sender) returns (bool success, address tokenAddress) {
+
+        int64 expectedResponseCode = HederaResponseCodes.SUCCESS;
+        int64 responseCode;
+
+        if (sender != treasury) {
+            expectedResponseCode = HederaResponseCodes.AUTHORIZATION_FAILED;
+        }
+
+        IHederaTokenService.HederaToken memory token = _getSimpleHederaToken(name, symbol, treasury);
+        (responseCode, tokenAddress) = htsPrecompile.createNonFungibleToken(token);
+
+        assertEq(expectedResponseCode, responseCode, "response code does not equal expected response code");
+
+        success = responseCode == HederaResponseCodes.SUCCESS;
+
+        if (success) {
+            int32 tokenType;
+            bool isToken;
+            (, isToken) = htsPrecompile.isToken(tokenAddress);
+            (responseCode, tokenType) = htsPrecompile.getTokenType(tokenAddress);
+
+            HederaNonFungibleToken hederaNonFungibleToken = HederaNonFungibleToken(tokenAddress);
+
+            assertEq(responseCode, HederaResponseCodes.SUCCESS, 'Failed to createNonFungibleToken');
+
+            assertEq(responseCode, HederaResponseCodes.SUCCESS, 'Did not set is{}Token correctly');
+            assertEq(tokenType, 1, 'Did not set isNonFungible correctly');
+
+            assertEq(token.name, hederaNonFungibleToken.name(), 'Did not set name correctly');
+            assertEq(token.symbol, hederaNonFungibleToken.symbol(), 'Did not set symbol correctly');
+            assertEq(
+                hederaNonFungibleToken.totalSupply(),
+                hederaNonFungibleToken.balanceOf(token.treasury),
+                'Did not mint initial supply to treasury'
+            );
+        }
+
+    }
+
+    function _doCreateHederaNonFungibleTokenDirectly(
+        address sender,
+        string memory name,
+        string memory symbol,
+        address treasury,
+        IHederaTokenService.TokenKey[] memory keys
+    ) internal setPranker(sender) returns (bool success, address tokenAddress) {
+
+        int64 expectedResponseCode = HederaResponseCodes.SUCCESS;
+        int64 responseCode;
+
+        IHederaTokenService.TokenInfo memory nftTokenInfo = _getSimpleHederaNftTokenInfo(
+            name,
+            symbol,
+            treasury
+        );
+
+        nftTokenInfo.token.tokenKeys = keys;
+
+        IHederaTokenService.HederaToken memory token = nftTokenInfo.token;
+
+        if (sender != treasury) {
+            expectedResponseCode = HederaResponseCodes.AUTHORIZATION_FAILED;
+        }
+
+        if (expectedResponseCode != HederaResponseCodes.SUCCESS) {
+            vm.expectRevert(bytes("PRECHECK_FAILED"));
+        }
+
+        /// @dev no need to register newly created HederaNonFungibleToken in this context as the constructor will call HtsPrecompileMock#registerHederaNonFungibleToken
+        HederaNonFungibleToken hederaNonFungibleToken = new HederaNonFungibleToken(nftTokenInfo);
+
+        if (expectedResponseCode == HederaResponseCodes.SUCCESS) {
+            success = true;
+        }
+
+        if (success) {
+
+            tokenAddress = address(hederaNonFungibleToken);
+
+            (int64 responseCode, int32 tokenType) = htsPrecompile.getTokenType(tokenAddress);
+
+            assertEq(responseCode, HederaResponseCodes.SUCCESS, 'Did not set is{}Token correctly');
+            assertEq(tokenType, 1, 'Did not set isNonFungible correctly');
+
+            assertEq(token.name, hederaNonFungibleToken.name(), 'Did not set name correctly');
+            assertEq(token.symbol, hederaNonFungibleToken.symbol(), 'Did not set symbol correctly');
+            assertEq(
+                hederaNonFungibleToken.totalSupply(),
+                hederaNonFungibleToken.balanceOf(token.treasury),
+                'Did not mint initial supply to treasury'
+            );
+
+        }
+
+    }
+
 }
