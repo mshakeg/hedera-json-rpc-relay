@@ -27,7 +27,7 @@ contract HederaNonFungibleToken is ERC721 {
     constructor(
         IHederaTokenService.TokenInfo memory _nftTokenInfo
     ) ERC721(_nftTokenInfo.token.name, _nftTokenInfo.token.symbol) {
-        HtsPrecompile.registerHederaNonFungibleToken(_nftTokenInfo);
+        HtsPrecompile.registerHederaNonFungibleToken(msg.sender, _nftTokenInfo);
     }
 
     /// @dev the HtsPrecompileMock should do precheck validation before calling any function with this modifier

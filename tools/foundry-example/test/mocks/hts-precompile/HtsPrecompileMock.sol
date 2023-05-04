@@ -257,11 +257,11 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         _nftTokenInfos[tokenAddress].ledgerId = nftTokenInfo.ledgerId;
     }
 
-    function _preCreateToken(HederaToken memory token) internal view returns (int64 responseCode) {
-        bool validTreasurySig = _isAccountOriginOrSender(token.treasury);
+    function _preCreateToken(address sender, HederaToken memory token) internal view returns (int64 responseCode) {
+        bool validTreasurySig = sender == token.treasury;
         // TODO: add additional validation on token; validation most likely required on only tokenKeys(if an address(contract/EOA) has a zero-balance then consider the tokenKey invalid since active accounts on Hedera must have a positive HBAR balance)
         if (!validTreasurySig) {
-            responseCode = HederaResponseCodes.AUTHORIZATION_FAILED;
+            return HederaResponseCodes.AUTHORIZATION_FAILED;
         }
         return HederaResponseCodes.SUCCESS;
     }
@@ -292,7 +292,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         }
 
         if (!commonPrecheckData.isFungible && !commonPrecheckData.isNonFungible) {
-                        return HederaResponseCodes.INVALID_TOKEN_ID;
+            return HederaResponseCodes.INVALID_TOKEN_ID;
         }
 
         return HederaResponseCodes.SUCCESS;
@@ -523,7 +523,17 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
 
     /// @dev register HederaFungibleToken; msg.sender is the HederaFungibleToken
     ///      can be called by any contract; however assumes msg.sender is a HederaFungibleToken
-    function registerHederaFungibleToken(FungibleTokenInfo memory fungibleTokenInfo) external {
+    function registerHederaFungibleToken(address caller, FungibleTokenInfo memory fungibleTokenInfo) external {
+
+        /// @dev if caller is this contract(i.e. the HtsPrecompileMock) then no need to call _preCreateToken since it was already called when the createFungibleToken or other relevant method was called
+        bool doPrecheck = caller != address(this);
+
+        int64 responseCode = doPrecheck ? _preCreateToken(caller, fungibleTokenInfo.tokenInfo.token) : HederaResponseCodes.SUCCESS;
+
+        if (responseCode != HederaResponseCodes.SUCCESS) {
+            revert("PRECHECK FAILED"); // TODO: revert with custom error that includes response code
+        }
+
         address tokenAddress = msg.sender;
         _isFungible[tokenAddress] = true;
         address treasury = _setFungibleTokenInfo(fungibleTokenInfo);
@@ -532,7 +542,17 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
 
     /// @dev register HederaNonFungibleToken; msg.sender is the HederaNonFungibleToken
     ///      can be called by any contract; however assumes msg.sender is a HederaNonFungibleToken
-    function registerHederaNonFungibleToken(TokenInfo memory nftTokenInfo) external {
+    function registerHederaNonFungibleToken(address caller, TokenInfo memory nftTokenInfo) external {
+
+        /// @dev if caller is this contract(i.e. the HtsPrecompileMock) then no need to call _preCreateToken since it was already called when the createNonFungibleToken or other relevant method was called
+        bool doPrecheck = caller != address(this);
+
+        int64 responseCode = doPrecheck ? _preCreateToken(caller, nftTokenInfo.token) : HederaResponseCodes.SUCCESS;
+
+        if (responseCode != HederaResponseCodes.SUCCESS) {
+            revert("PRECHECK FAILED"); // TODO: revert with custom error that includes response code
+        }
+
         address tokenAddress = msg.sender;
         _isNonFungible[tokenAddress] = true;
         address treasury = _setNftTokenInfo(nftTokenInfo);
@@ -788,7 +808,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         int64 initialTotalSupply,
         int32 decimals
     ) external payable noDelegateCall returns (int64 responseCode, address tokenAddress) {
-        responseCode = _preCreateToken(token);
+        responseCode = _preCreateToken(msg.sender, token);
         if (responseCode != HederaResponseCodes.SUCCESS) {
             return (responseCode, address(0));
         }
@@ -818,7 +838,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     function createNonFungibleToken(
         HederaToken memory token
     ) external payable noDelegateCall returns (int64 responseCode, address tokenAddress) {
-        responseCode = _preCreateToken(token);
+        responseCode = _preCreateToken(msg.sender, token);
         if (responseCode != HederaResponseCodes.SUCCESS) {
             return (responseCode, address(0));
         }
@@ -839,7 +859,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         FixedFee[] memory fixedFees,
         FractionalFee[] memory fractionalFees
     ) external payable noDelegateCall returns (int64 responseCode, address tokenAddress) {
-        responseCode = _preCreateToken(token);
+        responseCode = _preCreateToken(msg.sender, token);
         if (responseCode != HederaResponseCodes.SUCCESS) {
             return (responseCode, address(0));
         }
@@ -874,7 +894,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         FixedFee[] memory fixedFees,
         RoyaltyFee[] memory royaltyFees
     ) external payable noDelegateCall returns (int64 responseCode, address tokenAddress) {
-        responseCode = _preCreateToken(token);
+        responseCode = _preCreateToken(msg.sender, token);
         if (responseCode != HederaResponseCodes.SUCCESS) {
             return (responseCode, address(0));
         }

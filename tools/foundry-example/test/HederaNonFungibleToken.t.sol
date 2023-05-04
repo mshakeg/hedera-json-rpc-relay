@@ -1,26 +1,21 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import 'forge-std/Test.sol';
-import 'forge-std/console.sol';
-
 import 'hedera-smart-contracts/hts-precompile/IHederaTokenService.sol';
 import 'hedera-smart-contracts/hts-precompile/HederaResponseCodes.sol';
 import 'hedera-smart-contracts/hts-precompile/KeyHelper.sol';
 import './mocks/hts-precompile/HederaNonFungibleToken.sol';
 import './mocks/hts-precompile/HtsPrecompileMock.sol';
 
-contract HederaNonFungibleTokenTest is Test, KeyHelper {
+import './utils/HederaNonFungibleTokenUtils.sol';
+
+contract HederaNonFungibleTokenTest is HederaNonFungibleTokenUtils, KeyHelper {
     address alice = vm.addr(1);
     address bob = vm.addr(2);
     address carol = vm.addr(3);
     address dave = vm.addr(4);
 
     address constant ADDRESS_ZERO = address(0);
-
-    address constant htsPrecompileAddress = address(0x167);
-
-    HtsPrecompileMock htsPrecompile = HtsPrecompileMock(htsPrecompileAddress);
 
     struct Numbers {
         uint numU256;
@@ -29,51 +24,37 @@ contract HederaNonFungibleTokenTest is Test, KeyHelper {
 
     // setUp is executed before each and every test function
     function setUp() public {
-        HtsPrecompileMock htsPrecompileMock = new HtsPrecompileMock();
-        bytes memory code = address(htsPrecompileMock).code;
-        vm.etch(htsPrecompileAddress, code);
+
+        _setUpHtsPrecompileMock();
+
         vm.deal(alice, 100 ether);
         vm.deal(bob, 100 ether);
         vm.deal(carol, 100 ether);
         vm.deal(dave, 100 ether);
     }
 
-    function _getSimpleHederaToken(
+    function _doCreateHederaNonFungibleTokenViaHtsPrecompile(
+        address sender,
         string memory name,
         string memory symbol,
         address treasury
-    ) internal returns (IHederaTokenService.HederaToken memory token) {
-        token.name = name;
-        token.symbol = symbol;
-        token.treasury = treasury;
-    }
+    ) internal setPranker(sender) returns (bool success, address tokenAddress) {
 
-    function _getSimpleHederaNftTokenInfo(
-        string memory name,
-        string memory symbol,
-        address treasury
-    ) internal returns (IHederaTokenService.TokenInfo memory tokenInfo) {
+        int64 expectedResponseCode = HederaResponseCodes.SUCCESS;
+
+        if (sender != treasury) {
+            expectedResponseCode = HederaResponseCodes.AUTHORIZATION_FAILED;
+        }
+
         IHederaTokenService.HederaToken memory token = _getSimpleHederaToken(name, symbol, treasury);
-        tokenInfo.token = token;
-    }
-
-    modifier setPranker(address pranker) {
-        vm.startPrank(pranker);
-        _;
-        vm.stopPrank();
-    }
-
-    // positive cases
-    function test_CreateHederaNonFungibleTokenViaHtsPrecompile() public setPranker(alice) {
-
-        // start fixes from here
-
-        (, bool isToken) = htsPrecompile.isToken(address(0x123));
-        assertTrue(isToken == false);
-        IHederaTokenService.HederaToken memory token = _getSimpleHederaToken('NFT A', 'NFT-A', alice);
         (int64 responseCode, address tokenAddress) = htsPrecompile.createNonFungibleToken(token);
 
+        assertEq(expectedResponseCode, responseCode, "response code does not equal expected response code");
+
+        success = responseCode == HederaResponseCodes.SUCCESS;
+
         int32 tokenType;
+        bool isToken;
         (, isToken) = htsPrecompile.isToken(tokenAddress);
         (responseCode, tokenType) = htsPrecompile.getTokenType(tokenAddress);
 
@@ -91,6 +72,27 @@ contract HederaNonFungibleTokenTest is Test, KeyHelper {
             hederaNonFungibleToken.balanceOf(token.treasury),
             'Did not mint initial supply to treasury'
         );
+
+    }
+
+    // positive cases
+    function test_CreateHederaNonFungibleTokenViaHtsPrecompile() public {
+
+        address sender = alice;
+        string memory name = 'NFT A';
+        string memory symbol = 'NFT-A';
+        address treasury = bob;
+
+        bool success;
+
+        (success, ) = _doCreateHederaNonFungibleTokenViaHtsPrecompile(sender, name, symbol, treasury);
+        assertEq(success, false, "expected failure since treasury is not sender");
+
+        treasury = alice;
+
+        (success, ) = _doCreateHederaNonFungibleTokenViaHtsPrecompile(sender, name, symbol, treasury);
+        assertEq(success, true, "expected success since treasury is sender");
+
     }
 
     function test_CreateHederaNonFungibleTokenDirectly() public setPranker(alice) {
@@ -639,5 +641,5 @@ contract HederaNonFungibleTokenTest is Test, KeyHelper {
     }
 }
 
-// forge test --match-contract HederaNonFungibleTokenTest --match-test test_CanBurnViaHtsPrecompile -vv
+// forge test --match-contract HederaNonFungibleTokenTest --match-test test_CreateHederaNonFungibleTokenViaHtsPrecompile -vv
 // forge test --match-contract HederaNonFungibleTokenTest -vv

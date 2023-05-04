@@ -10,15 +10,6 @@ import "./CommonUtils.sol";
 import "./HederaTokenUtils.sol";
 
 contract HederaFungibleTokenUtils is CommonUtils, HederaTokenUtils {
-    function _getSimpleHederaToken(
-        string memory name,
-        string memory symbol,
-        address treasury
-    ) internal returns (IHederaTokenService.HederaToken memory token) {
-        token.name = name;
-        token.symbol = symbol;
-        token.treasury = treasury;
-    }
 
     function _getSimpleHederaFungibleTokenInfo(
         string memory name,

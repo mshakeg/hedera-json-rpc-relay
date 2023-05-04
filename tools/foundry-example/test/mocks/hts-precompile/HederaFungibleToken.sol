@@ -20,7 +20,7 @@ contract HederaFungibleToken is ERC20 {
     constructor(
         IHederaTokenService.FungibleTokenInfo memory _fungibleTokenInfo
     ) ERC20(_fungibleTokenInfo.tokenInfo.token.name, _fungibleTokenInfo.tokenInfo.token.symbol) {
-        HtsPrecompile.registerHederaFungibleToken(_fungibleTokenInfo);
+        HtsPrecompile.registerHederaFungibleToken(msg.sender, _fungibleTokenInfo);
         _decimals = uint8(uint32(_fungibleTokenInfo.decimals));
         address treasury = _fungibleTokenInfo.tokenInfo.token.treasury;
         _mint(treasury, uint(uint64(_fungibleTokenInfo.tokenInfo.totalSupply)));

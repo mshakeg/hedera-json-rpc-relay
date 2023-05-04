@@ -19,4 +19,14 @@ abstract contract HederaTokenUtils is Test {
         vm.etch(htsPrecompileAddress, code);
     }
 
+    function _getSimpleHederaToken(
+        string memory name,
+        string memory symbol,
+        address treasury
+    ) internal returns (IHederaTokenService.HederaToken memory token) {
+        token.name = name;
+        token.symbol = symbol;
+        token.treasury = treasury;
+    }
+
 }
