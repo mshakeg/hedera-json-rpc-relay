@@ -38,7 +38,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     mapping(address => mapping(address => bool)) internal _kyc; // is KYCed is the positive case(i.e. explicitly requires KYC approval); see defaultKycStatus
     // HTS token -> account -> isFrozen
     mapping(address => mapping(address => bool)) internal _unfrozen; // is unfrozen is positive case(i.e. explicitly requires being unfrozen); see freezeDefault
-    // HTS token -> keyType -> value e.g. 1 -> 0x123 means that the ADMIN is account 0x123
+    // HTS token -> keyType -> value e.g. 1 -> 0x123 means that the ADMIN is account 0x123; TODO: consider using KeyValueType instead of uint
     mapping(address => mapping(uint => address)) internal _tokenKeys; /// @dev faster access then getting keys via {FungibleTokenInfo|NonFungibleTokenInfo}#TokenInfo.HederaToken.tokenKeys[]; however only supports KeyValueType.CONTRACT_ID
 
     // this struct avoids duplicating common NFT data, in particular IHederaTokenService.NonFungibleTokenInfo.tokenInfo
