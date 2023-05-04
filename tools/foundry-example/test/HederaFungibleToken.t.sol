@@ -18,6 +18,7 @@ import './mocks/hts-precompile/HtsPrecompileMock.sol';
 // TODO: investigate permissions that tx.origin is granted in precompile mock and adjust authorization accordingly if required
 // TODO: test all token keys
 // TODO: evaluate code coverage of all tests
+// TODO: add deploy contracts scripts for hedera testnet and mainnet
 
 contract HederaFungibleTokenTest is Test, KeyHelper {
     address alice = vm.addr(1);
@@ -154,6 +155,27 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
             hederaFungibleToken.balanceOf(token.treasury),
             'Did not mint initial supply to treasury'
         );
+    }
+
+    function _createSimpleMockFungibleToken(IHederaTokenService.TokenKey[] memory keys) internal returns (address tokenAddress) {
+
+        address sender = alice;
+        string memory name = 'Token A';
+        string memory symbol = 'TA';
+        address treasury = alice;
+        int64 initialTotalSupply = 1e16;
+        int32 decimals = 8;
+
+        tokenAddress = _doCreateHederaFungibleTokenDirectly(
+            sender,
+            name,
+            symbol,
+            treasury,
+            initialTotalSupply,
+            decimals,
+            keys
+        );
+
     }
 
     function _doAssociateViaHtsPrecompile(
@@ -589,72 +611,24 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
     }
 
     function test_ApproveViaHtsPrecompile() public {
-        address sender = alice;
-        string memory name = 'Token A';
-        string memory symbol = 'TA';
-        address treasury = alice;
-        int64 initialTotalSupply = 1e16;
-        int32 decimals = 8;
-
         IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](0);
-
-        address tokenAddress = _doCreateHederaFungibleTokenDirectly(
-            sender,
-            name,
-            symbol,
-            treasury,
-            initialTotalSupply,
-            decimals,
-            keys
-        );
+        address tokenAddress = _createSimpleMockFungibleToken(keys);
 
         uint allowance = 1e8;
         _doApproveViaHtsPrecompile(alice, tokenAddress, bob, allowance);
     }
 
     function test_ApproveDirectly() public {
-        address sender = alice;
-        string memory name = 'Token A';
-        string memory symbol = 'TA';
-        address treasury = alice;
-        int64 initialTotalSupply = 1e16;
-        int32 decimals = 8;
-
         IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](0);
-
-        address tokenAddress = _doCreateHederaFungibleTokenDirectly(
-            sender,
-            name,
-            symbol,
-            treasury,
-            initialTotalSupply,
-            decimals,
-            keys
-        );
+        address tokenAddress = _createSimpleMockFungibleToken(keys);
 
         uint allowance = 1e8;
         _doApproveDirectly(alice, tokenAddress, bob, allowance);
     }
 
     function test_TransferViaHtsPrecompile() public {
-        address sender = alice;
-        string memory name = 'Token A';
-        string memory symbol = 'TA';
-        address treasury = alice;
-        int64 initialTotalSupply = 1e16;
-        int32 decimals = 8;
-
         IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](0);
-
-        address tokenAddress = _doCreateHederaFungibleTokenDirectly(
-            sender,
-            name,
-            symbol,
-            treasury,
-            initialTotalSupply,
-            decimals,
-            keys
-        );
+        address tokenAddress = _createSimpleMockFungibleToken(keys);
 
         bool success;
         uint256 amount = 1e8;
@@ -678,24 +652,8 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
     }
 
     function test_TransferDirectly() public {
-        address sender = alice;
-        string memory name = 'Token A';
-        string memory symbol = 'TA';
-        address treasury = alice;
-        int64 initialTotalSupply = 1e16;
-        int32 decimals = 8;
-
         IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](0);
-
-        address tokenAddress = _doCreateHederaFungibleTokenDirectly(
-            sender,
-            name,
-            symbol,
-            treasury,
-            initialTotalSupply,
-            decimals,
-            keys
-        );
+        address tokenAddress = _createSimpleMockFungibleToken(keys);
 
         bool success;
         uint256 amount = 1e8;
@@ -719,24 +677,8 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
     }
 
     function test_TransferUsingAllowanceViaHtsPrecompile() public {
-        address sender = alice;
-        string memory name = 'Token A';
-        string memory symbol = 'TA';
-        address treasury = alice;
-        int64 initialTotalSupply = 1e16;
-        int32 decimals = 8;
-
         IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](0);
-
-        address tokenAddress = _doCreateHederaFungibleTokenDirectly(
-            sender,
-            name,
-            symbol,
-            treasury,
-            initialTotalSupply,
-            decimals,
-            keys
-        );
+        address tokenAddress = _createSimpleMockFungibleToken(keys);
 
         bool success;
         uint256 amount = 1e8;
@@ -766,24 +708,9 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
     }
 
     function test_TransferUsingAllowanceDirectly() public {
-        address sender = alice;
-        string memory name = 'Token A';
-        string memory symbol = 'TA';
-        address treasury = alice;
-        int64 initialTotalSupply = 1e16;
-        int32 decimals = 8;
 
         IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](0);
-
-        address tokenAddress = _doCreateHederaFungibleTokenDirectly(
-            sender,
-            name,
-            symbol,
-            treasury,
-            initialTotalSupply,
-            decimals,
-            keys
-        );
+        address tokenAddress = _createSimpleMockFungibleToken(keys);
 
         bool success;
         uint256 amount = 1e8;
@@ -815,58 +742,28 @@ contract HederaFungibleTokenTest is Test, KeyHelper {
     /// @dev there is no test_CanMintDirectly as the ERC20 standard does not typically allow direct mints
     function test_CanMintViaHtsPrecompile() public {
 
-        address sender = alice;
-        string memory name = 'Token A';
-        string memory symbol = 'TA';
-        address treasury = alice;
-        int64 initialTotalSupply = 1e16;
-        int32 decimals = 8;
-
         IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](1);
         keys[0] = KeyHelper.getSingleKey(KeyHelper.KeyType.SUPPLY, KeyHelper.KeyValueType.CONTRACT_ID, alice);
-
-        address tokenAddress = _doCreateHederaFungibleTokenDirectly(
-            sender,
-            name,
-            symbol,
-            treasury,
-            initialTotalSupply,
-            decimals,
-            keys
-        );
+        address tokenAddress = _createSimpleMockFungibleToken(keys);
 
         _doAssociateViaHtsPrecompile(bob, tokenAddress);
 
         bool success;
 
-        (success, ) = _doMintViaHtsPrecompile(bob, tokenAddress, initialTotalSupply);
+        int64 mintAmount = 1e8;
+
+        (success, ) = _doMintViaHtsPrecompile(bob, tokenAddress, mintAmount);
         assertEq(success, false, "expected mint to fail since bob is not supply key");
 
-        (success, ) = _doMintViaHtsPrecompile(alice, tokenAddress, initialTotalSupply);
+        (success, ) = _doMintViaHtsPrecompile(alice, tokenAddress, mintAmount);
         assertEq(success, true, "expected mint to succeed");
     }
 
     /// @dev there is no test_CanBurnDirectly as the ERC20 standard does not typically allow direct burns
     function test_CanBurnViaHtsPrecompile() public {
 
-        address sender = alice;
-        string memory name = 'Token A';
-        string memory symbol = 'TA';
-        address treasury = alice;
-        int64 initialTotalSupply = 1e16;
-        int32 decimals = 8;
-
         IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](0);
-
-        address tokenAddress = _doCreateHederaFungibleTokenDirectly(
-            sender,
-            name,
-            symbol,
-            treasury,
-            initialTotalSupply,
-            decimals,
-            keys
-        );
+        address tokenAddress = _createSimpleMockFungibleToken(keys);
 
         bool success;
 
