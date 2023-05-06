@@ -86,7 +86,7 @@ contract HederaFungibleTokenTest is HederaTokenUtils, HederaFungibleTokenUtils, 
             token: tokenAddress,
             from: alice,
             to: bob,
-            amount: amount
+            amountOrSerialNumber: amount
         });
 
         (success, ) = _doTransferViaHtsPrecompile(transferParams);
@@ -111,7 +111,7 @@ contract HederaFungibleTokenTest is HederaTokenUtils, HederaFungibleTokenUtils, 
             token: tokenAddress,
             from: alice,
             to: bob,
-            amount: amount
+            amountOrSerialNumber: amount
         });
 
         (success, ) = _doTransferDirectly(transferParams);
@@ -136,7 +136,7 @@ contract HederaFungibleTokenTest is HederaTokenUtils, HederaFungibleTokenUtils, 
             token: tokenAddress,
             from: alice,
             to: bob,
-            amount: amount
+            amountOrSerialNumber: amount
         });
 
         (success, ) = _doTransferViaHtsPrecompile(transferParams);
@@ -168,7 +168,7 @@ contract HederaFungibleTokenTest is HederaTokenUtils, HederaFungibleTokenUtils, 
             token: tokenAddress,
             from: alice,
             to: bob,
-            amount: amount
+            amountOrSerialNumber: amount
         });
 
         (success, ) = _doTransferDirectly(transferParams);

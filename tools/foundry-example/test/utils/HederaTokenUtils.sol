@@ -193,4 +193,351 @@ abstract contract HederaTokenUtils is Test, CommonUtils {
         }
     }
 
+    struct TransferParams {
+        address sender;
+        address token;
+        address from;
+        address to;
+        uint256 amountOrSerialNumber; // amount for FUNGIBLE serialNumber for NON_FUNGIBLE
+    }
+
+    struct TransferInfo {
+        // applicable to FUNGIBLE
+        uint256 spenderAllowance;
+        uint256 fromBalance;
+        uint256 toBalance;
+        // applicable to NON_FUNGIBLE
+        address owner;
+        address approvedId;
+        bool isSenderOperator;
+    }
+
+    struct TransferChecks {
+        bool isRecipientAssociated;
+        bool isRequestFromOwner;
+        int64 expectedResponseCode;
+        bool isToken;
+        int32 tokenType;
+        bool isFungible;
+        bool isNonFungible;
+    }
+
+    function _doTransferViaHtsPrecompile(
+        TransferParams memory transferParams
+    ) internal setPranker(transferParams.sender) returns (bool success, int64 responseCode) {
+        HederaFungibleToken hederaFungibleToken = HederaFungibleToken(transferParams.token);
+        HederaNonFungibleToken hederaNonFungibleToken = HederaNonFungibleToken(transferParams.token);
+
+        TransferChecks memory transferChecks;
+        TransferInfo memory preTransferInfo;
+
+        transferChecks.expectedResponseCode = HederaResponseCodes.SUCCESS; // assume SUCCESS and overwrite with !SUCCESS where applicable
+
+        (transferChecks.expectedResponseCode, transferChecks.tokenType) = htsPrecompile.getTokenType(transferParams.token);
+
+        if (transferChecks.expectedResponseCode == HederaResponseCodes.SUCCESS) {
+            transferChecks.isFungible = transferChecks.tokenType == 0 ? true : false;
+            transferChecks.isNonFungible = transferChecks.tokenType == 1 ? true : false;
+        }
+
+        transferChecks.isRecipientAssociated = htsPrecompile.isAssociated(transferParams.to, transferParams.token);
+        transferChecks.isRequestFromOwner = transferParams.sender == transferParams.from;
+
+        if (transferChecks.isFungible) {
+            preTransferInfo.spenderAllowance = hederaFungibleToken.allowance(transferParams.from, transferParams.sender);
+            preTransferInfo.fromBalance = hederaFungibleToken.balanceOf(transferParams.from);
+            preTransferInfo.toBalance = hederaFungibleToken.balanceOf(transferParams.to);
+        }
+
+        if (transferChecks.isNonFungible) {
+            preTransferInfo.owner = hederaNonFungibleToken.ownerOf(transferParams.amountOrSerialNumber);
+            preTransferInfo.approvedId = hederaNonFungibleToken.getApproved(transferParams.amountOrSerialNumber);
+            preTransferInfo.isSenderOperator = hederaNonFungibleToken.isApprovedForAll(transferParams.from, transferParams.sender);
+        }
+
+        if (transferChecks.isRequestFromOwner) {
+            if (transferChecks.isFungible) {
+                if (preTransferInfo.fromBalance < transferParams.amountOrSerialNumber) {
+                    transferChecks.expectedResponseCode = HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
+                }
+            }
+
+            if (transferChecks.isNonFungible) {
+                if (preTransferInfo.owner != transferParams.sender) {
+                    transferChecks.expectedResponseCode = HederaResponseCodes.SENDER_DOES_NOT_OWN_NFT_SERIAL_NO;
+                }
+            }
+        }
+
+        if (!transferChecks.isRequestFromOwner) {
+            if (transferChecks.isFungible) {
+                if (preTransferInfo.spenderAllowance < transferParams.amountOrSerialNumber) {
+                    transferChecks.expectedResponseCode = HederaResponseCodes.AMOUNT_EXCEEDS_ALLOWANCE;
+                }
+            }
+
+            if (transferChecks.isNonFungible) {
+
+                if (preTransferInfo.owner != transferParams.from) {
+                    transferChecks.expectedResponseCode = HederaResponseCodes.INVALID_ALLOWANCE_OWNER_ID;
+                }
+
+                if (preTransferInfo.approvedId != transferParams.sender && !preTransferInfo.isSenderOperator) {
+                    transferChecks.expectedResponseCode = HederaResponseCodes.SPENDER_DOES_NOT_HAVE_ALLOWANCE;
+                }
+            }
+        }
+
+        if (!transferChecks.isRecipientAssociated) {
+            transferChecks.expectedResponseCode = HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT;
+        }
+
+        responseCode = htsPrecompile.transferFrom(
+            transferParams.token,
+            transferParams.from,
+            transferParams.to,
+            transferParams.amountOrSerialNumber
+        );
+
+        assertEq(
+            transferChecks.expectedResponseCode,
+            responseCode,
+            'expected response code does not equal actual response code'
+        );
+
+        success = responseCode == HederaResponseCodes.SUCCESS;
+
+        TransferInfo memory postTransferInfo;
+
+        if (transferChecks.isFungible) {
+            postTransferInfo.spenderAllowance = hederaFungibleToken.allowance(transferParams.from, transferParams.sender);
+            postTransferInfo.fromBalance = hederaFungibleToken.balanceOf(transferParams.from);
+            postTransferInfo.toBalance = hederaFungibleToken.balanceOf(transferParams.to);
+        }
+
+        if (transferChecks.isNonFungible) {
+            postTransferInfo.owner = hederaNonFungibleToken.ownerOf(transferParams.amountOrSerialNumber);
+            postTransferInfo.approvedId = hederaNonFungibleToken.getApproved(transferParams.amountOrSerialNumber);
+            postTransferInfo.isSenderOperator = hederaNonFungibleToken.isApprovedForAll(transferParams.from, transferParams.sender);
+        }
+
+        if (success) {
+
+            if (transferChecks.isFungible) {
+                assertEq(
+                    preTransferInfo.toBalance + transferParams.amountOrSerialNumber,
+                    postTransferInfo.toBalance,
+                    'to balance did not update correctly'
+                );
+                assertEq(
+                    preTransferInfo.fromBalance - transferParams.amountOrSerialNumber,
+                    postTransferInfo.fromBalance,
+                    'from balance did not update correctly'
+                );
+
+                if (!transferChecks.isRequestFromOwner) {
+                    assertEq(
+                        preTransferInfo.spenderAllowance - transferParams.amountOrSerialNumber,
+                        postTransferInfo.spenderAllowance,
+                        'spender allowance did not update correctly'
+                    );
+                }
+            }
+
+            if (transferChecks.isNonFungible) {
+                assertEq(postTransferInfo.owner, transferParams.to, "expected to to be new owner");
+                assertEq(postTransferInfo.approvedId, address(0), "expected approvedId to be reset");
+                assertEq(postTransferInfo.isSenderOperator, preTransferInfo.isSenderOperator, "operator should not have changed");
+            }
+        }
+
+        if (!success) {
+
+            if (transferChecks.isFungible) {
+                assertEq(preTransferInfo.toBalance, postTransferInfo.toBalance, 'to balance changed unexpectedly');
+                assertEq(preTransferInfo.fromBalance, postTransferInfo.fromBalance, 'from balance changed unexpectedly');
+
+                if (!transferChecks.isRequestFromOwner) {
+                    assertEq(
+                        preTransferInfo.spenderAllowance,
+                        postTransferInfo.spenderAllowance,
+                        'spender allowance changed unexpectedly'
+                    );
+                }
+            }
+
+            if (transferChecks.isNonFungible) {
+                assertEq(preTransferInfo.owner, postTransferInfo.owner, 'owner should not have changed on failure');
+                assertEq(preTransferInfo.approvedId, postTransferInfo.approvedId, 'approvedId should not have changed on failure');
+                assertEq(preTransferInfo.isSenderOperator, postTransferInfo.isSenderOperator, 'isSenderOperator should not have changed on failure');
+            }
+        }
+    }
+
+    function _doTransferDirectly(
+        TransferParams memory transferParams
+    ) internal setPranker(transferParams.sender) returns (bool success, int64 responseCode) {
+        HederaFungibleToken hederaFungibleToken = HederaFungibleToken(transferParams.token);
+        HederaNonFungibleToken hederaNonFungibleToken = HederaNonFungibleToken(transferParams.token);
+
+        TransferChecks memory transferChecks;
+        TransferInfo memory preTransferInfo;
+
+        transferChecks.expectedResponseCode = HederaResponseCodes.SUCCESS; // assume SUCCESS and overwrite with !SUCCESS where applicable
+
+        (transferChecks.expectedResponseCode, transferChecks.tokenType) = htsPrecompile.getTokenType(transferParams.token);
+
+        if (transferChecks.expectedResponseCode == HederaResponseCodes.SUCCESS) {
+            transferChecks.isFungible = transferChecks.tokenType == 0 ? true : false;
+            transferChecks.isNonFungible = transferChecks.tokenType == 1 ? true : false;
+        }
+
+        transferChecks.isRecipientAssociated = htsPrecompile.isAssociated(transferParams.to, transferParams.token);
+        transferChecks.isRequestFromOwner = transferParams.sender == transferParams.from;
+
+        if (transferChecks.isFungible) {
+            preTransferInfo.spenderAllowance = hederaFungibleToken.allowance(transferParams.from, transferParams.sender);
+            preTransferInfo.fromBalance = hederaFungibleToken.balanceOf(transferParams.from);
+            preTransferInfo.toBalance = hederaFungibleToken.balanceOf(transferParams.to);
+        }
+
+        if (transferChecks.isNonFungible) {
+            preTransferInfo.owner = hederaNonFungibleToken.ownerOf(transferParams.amountOrSerialNumber);
+            preTransferInfo.approvedId = hederaNonFungibleToken.getApproved(transferParams.amountOrSerialNumber);
+            preTransferInfo.isSenderOperator = hederaNonFungibleToken.isApprovedForAll(transferParams.from, transferParams.sender);
+        }
+
+        if (transferChecks.isRequestFromOwner) {
+            if (transferChecks.isFungible) {
+                if (preTransferInfo.fromBalance < transferParams.amountOrSerialNumber) {
+                    transferChecks.expectedResponseCode = HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
+                }
+            }
+
+            if (transferChecks.isNonFungible) {
+                if (preTransferInfo.owner != transferParams.sender) {
+                    transferChecks.expectedResponseCode = HederaResponseCodes.SENDER_DOES_NOT_OWN_NFT_SERIAL_NO;
+                }
+            }
+        }
+
+        if (!transferChecks.isRequestFromOwner) {
+            if (transferChecks.isFungible) {
+                if (preTransferInfo.spenderAllowance < transferParams.amountOrSerialNumber) {
+                    transferChecks.expectedResponseCode = HederaResponseCodes.AMOUNT_EXCEEDS_ALLOWANCE;
+                }
+            }
+
+            if (transferChecks.isNonFungible) {
+
+                if (preTransferInfo.owner != transferParams.from) {
+                    transferChecks.expectedResponseCode = HederaResponseCodes.INVALID_ALLOWANCE_OWNER_ID;
+                }
+
+                if (preTransferInfo.approvedId != transferParams.sender && !preTransferInfo.isSenderOperator) {
+                    transferChecks.expectedResponseCode = HederaResponseCodes.SPENDER_DOES_NOT_HAVE_ALLOWANCE;
+                }
+            }
+        }
+
+        if (!transferChecks.isRecipientAssociated) {
+            transferChecks.expectedResponseCode = HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT;
+        }
+
+        if (transferChecks.expectedResponseCode != HederaResponseCodes.SUCCESS) {
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    HederaFungibleToken.HtsPrecompileError.selector,
+                    transferChecks.expectedResponseCode
+                )
+            );
+        }
+
+        if (transferChecks.isRequestFromOwner) {
+            if (transferChecks.isFungible) {
+                hederaFungibleToken.transfer(transferParams.to, transferParams.amountOrSerialNumber);
+            }
+            if (transferChecks.isNonFungible) {
+                hederaNonFungibleToken.transferFrom(transferParams.from, transferParams.to, transferParams.amountOrSerialNumber);
+            }
+        }
+
+        if (!transferChecks.isRequestFromOwner) {
+            if (transferChecks.isFungible) {
+                hederaFungibleToken.transferFrom(transferParams.from, transferParams.to, transferParams.amountOrSerialNumber);
+            }
+            if (transferChecks.isNonFungible) {
+                hederaNonFungibleToken.transferFrom(transferParams.from, transferParams.to, transferParams.amountOrSerialNumber);
+            }
+        }
+
+        if (transferChecks.expectedResponseCode == HederaResponseCodes.SUCCESS) {
+            success = true;
+        }
+
+        TransferInfo memory postTransferInfo;
+
+        if (transferChecks.isFungible) {
+            postTransferInfo.spenderAllowance = hederaFungibleToken.allowance(transferParams.from, transferParams.sender);
+            postTransferInfo.fromBalance = hederaFungibleToken.balanceOf(transferParams.from);
+            postTransferInfo.toBalance = hederaFungibleToken.balanceOf(transferParams.to);
+        }
+
+        if (transferChecks.isNonFungible) {
+            postTransferInfo.owner = hederaNonFungibleToken.ownerOf(transferParams.amountOrSerialNumber);
+            postTransferInfo.approvedId = hederaNonFungibleToken.getApproved(transferParams.amountOrSerialNumber);
+            postTransferInfo.isSenderOperator = hederaNonFungibleToken.isApprovedForAll(transferParams.from, transferParams.sender);
+        }
+
+        if (success) {
+            if (transferChecks.isFungible) {
+                assertEq(
+                    preTransferInfo.toBalance + transferParams.amountOrSerialNumber,
+                    postTransferInfo.toBalance,
+                    'to balance did not update correctly'
+                );
+                assertEq(
+                    preTransferInfo.fromBalance - transferParams.amountOrSerialNumber,
+                    postTransferInfo.fromBalance,
+                    'from balance did not update correctly'
+                );
+
+                if (!transferChecks.isRequestFromOwner) {
+                    assertEq(
+                        preTransferInfo.spenderAllowance - transferParams.amountOrSerialNumber,
+                        postTransferInfo.spenderAllowance,
+                        'spender allowance did not update correctly'
+                    );
+                }
+            }
+
+            if (transferChecks.isNonFungible) {
+                assertEq(postTransferInfo.owner, transferParams.to, "expected to to be new owner");
+                assertEq(postTransferInfo.approvedId, address(0), "expected approvedId to be reset");
+                assertEq(postTransferInfo.isSenderOperator, preTransferInfo.isSenderOperator, "operator should not have changed");
+            }
+        }
+
+        if (!success) {
+            if (transferChecks.isFungible) {
+                assertEq(preTransferInfo.toBalance, postTransferInfo.toBalance, 'to balance changed unexpectedly');
+                assertEq(preTransferInfo.fromBalance, postTransferInfo.fromBalance, 'from balance changed unexpectedly');
+
+                if (!transferChecks.isRequestFromOwner) {
+                    assertEq(
+                        preTransferInfo.spenderAllowance,
+                        postTransferInfo.spenderAllowance,
+                        'spender allowance changed unexpectedly'
+                    );
+                }
+            }
+
+            if (transferChecks.isNonFungible) {
+                assertEq(preTransferInfo.owner, postTransferInfo.owner, 'owner should not have changed on failure');
+                assertEq(preTransferInfo.approvedId, postTransferInfo.approvedId, 'approvedId should not have changed on failure');
+                assertEq(preTransferInfo.isSenderOperator, postTransferInfo.isSenderOperator, 'isSenderOperator should not have changed on failure');
+            }
+        }
+    }
+
 }
