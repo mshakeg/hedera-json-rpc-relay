@@ -384,7 +384,12 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
             return HederaResponseCodes.AUTHORIZATION_FAILED;
         }
         if (!doesTreasuryOwnSufficientToken) {
-            return HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
+            if (isFungible) {
+                return HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE;
+            }
+            if (isNonFungible) {
+                return HederaResponseCodes.SENDER_DOES_NOT_OWN_NFT_SERIAL_NO;
+            }
         }
 
         return HederaResponseCodes.SUCCESS;

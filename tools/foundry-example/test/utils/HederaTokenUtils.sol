@@ -540,4 +540,124 @@ abstract contract HederaTokenUtils is Test, CommonUtils {
         }
     }
 
+    struct BurnParams {
+        address sender;
+        address token;
+        int64 amountOrSerialNumber;
+    }
+
+    struct BurnChecks {
+        bool isToken;
+        int32 tokenType;
+        bool isFungible;
+        bool isNonFungible;
+        uint256 amountOrSerialNumberU256;
+        int64 expectedResponseCode;
+    }
+
+    struct BurnInfo {
+        address owner;
+        uint256 totalSupply;
+        uint256 treasuryBalance;
+    }
+
+    function _doBurnViaHtsPrecompile(BurnParams memory burnParams) internal setPranker(burnParams.sender) returns (bool success, int64 responseCode) {
+
+        HederaFungibleToken hederaFungibleToken = HederaFungibleToken(burnParams.token);
+        HederaNonFungibleToken hederaNonFungibleToken = HederaNonFungibleToken(burnParams.token);
+
+        BurnChecks memory burnChecks;
+
+        bytes[] memory NULL_BYTES = new bytes[](1);
+
+        int64 newTotalSupply;
+        int64[] memory serialNumbers = new int64[](1); // this test function currently only supports 1 NFT being burnt at a time
+
+        burnChecks.amountOrSerialNumberU256 = uint64(burnParams.amountOrSerialNumber);
+        burnChecks.expectedResponseCode = HederaResponseCodes.SUCCESS; // assume SUCCESS initially and later overwrite error code accordingly
+
+        burnChecks.expectedResponseCode = HederaResponseCodes.SUCCESS; // assume SUCCESS and overwrite with !SUCCESS where applicable
+
+        (burnChecks.expectedResponseCode, burnChecks.tokenType) = htsPrecompile.getTokenType(burnParams.token);
+
+        if (burnChecks.expectedResponseCode == HederaResponseCodes.SUCCESS) {
+            burnChecks.isFungible = burnChecks.tokenType == 0 ? true : false;
+            burnChecks.isNonFungible = burnChecks.tokenType == 1 ? true : false;
+        }
+
+        address treasury = htsPrecompile.getTreasuryAccount(burnParams.token);
+
+        BurnInfo memory preBurnInfo;
+
+        preBurnInfo.totalSupply = hederaFungibleToken.totalSupply();
+        preBurnInfo.treasuryBalance = hederaFungibleToken.balanceOf(treasury);
+
+        if (burnChecks.isNonFungible) {
+            // amount is only applicable to type FUNGIBLE
+            serialNumbers[0] = burnParams.amountOrSerialNumber; // only burn 1 NFT at a time
+            preBurnInfo.owner = hederaNonFungibleToken.ownerOf(burnChecks.amountOrSerialNumberU256);
+            burnParams.amountOrSerialNumber = 0;
+        }
+
+        if (burnParams.sender != preBurnInfo.owner) {
+            burnChecks.expectedResponseCode = HederaResponseCodes.SENDER_DOES_NOT_OWN_NFT_SERIAL_NO;
+        }
+
+        if (treasury != burnParams.sender) {
+            burnChecks.expectedResponseCode = HederaResponseCodes.AUTHORIZATION_FAILED;
+        }
+
+        (responseCode, newTotalSupply) = htsPrecompile.burnToken(burnParams.token, burnParams.amountOrSerialNumber, serialNumbers);
+
+        assertEq(burnChecks.expectedResponseCode, responseCode, 'expected response code does not equal actual response code');
+
+        success = responseCode == HederaResponseCodes.SUCCESS;
+
+        BurnInfo memory postBurnInfo;
+
+        postBurnInfo.totalSupply = hederaFungibleToken.totalSupply();
+        postBurnInfo.treasuryBalance = hederaFungibleToken.balanceOf(treasury);
+
+        if (success) {
+            if (burnChecks.isFungible) {
+                assertEq(
+                    preBurnInfo.totalSupply - burnChecks.amountOrSerialNumberU256,
+                    postBurnInfo.totalSupply,
+                    'expected total supply to decrease by burn amount'
+                );
+                assertEq(
+                    preBurnInfo.treasuryBalance - burnChecks.amountOrSerialNumberU256,
+                    postBurnInfo.treasuryBalance,
+                    'expected treasury balance to decrease by burn amount'
+                );
+            }
+
+            if (burnChecks.isNonFungible) {
+                assertEq(
+                    preBurnInfo.totalSupply - 1,
+                    postBurnInfo.totalSupply,
+                    'expected total supply to decrease by burn amount'
+                );
+                assertEq(
+                    preBurnInfo.treasuryBalance - 1,
+                    postBurnInfo.treasuryBalance,
+                    'expected treasury balance to decrease by burn amount'
+                );
+            }
+        }
+
+        if (!success) {
+            assertEq(
+                preBurnInfo.totalSupply,
+                postBurnInfo.totalSupply,
+                'expected total supply to not change if failed'
+            );
+            assertEq(
+                preBurnInfo.treasuryBalance,
+                postBurnInfo.treasuryBalance,
+                'expected treasury balance to not change if failed'
+            );
+        }
+    }
+
 }

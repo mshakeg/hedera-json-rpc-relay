@@ -167,4 +167,8 @@ contract HederaNonFungibleToken is ERC721 {
         minted = nftCount.minted;
     }
 
+    function burnCount() external view returns (int64 burned) {
+        burned = nftCount.burned;
+    }
+
 }

@@ -453,65 +453,76 @@ contract HederaNonFungibleTokenTest is HederaNonFungibleTokenUtils, KeyHelper {
     }
 
     /// @dev there is no test_CanBurnDirectly as the ERC20 standard does not typically allow direct burns
-    function test_CanBurnViaHtsPrecompile() public setPranker(alice) {
+    function test_CanBurnViaHtsPrecompile() public {
+
         bytes[] memory NULL_BYTES = new bytes[](1);
-
-        IHederaTokenService.TokenInfo memory nftTokenInfo = _getSimpleHederaNftTokenInfo(
-            'NFT A',
-            'NFT-A',
-            alice
-        );
-
-        IHederaTokenService.HederaToken memory token = nftTokenInfo.token;
 
         IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](1);
         keys[0] = KeyHelper.getSingleKey(KeyHelper.KeyType.SUPPLY, KeyHelper.KeyValueType.CONTRACT_ID, alice);
+        address tokenAddress = _createSimpleMockNonFungibleToken(alice, keys);
 
-        nftTokenInfo.token.tokenKeys = keys;
+        bool success;
+        uint256 serialIdU256;
 
-        /// @dev no need to register newly created HederaNonFungibleToken in this context as the constructor will call HtsPrecompileMock#registerHederaNonFungibleToken
-        HederaNonFungibleToken hederaNonFungibleToken = new HederaNonFungibleToken(nftTokenInfo);
-        address tokenAddress = address(hederaNonFungibleToken);
+        MintResponse memory mintResponse;
+        MintParams memory mintParams;
+        BurnParams memory burnParams;
 
-        int64 responseCode;
-        int64 newTotalSupply;
-        int64[] memory serialNumbers;
+        mintParams = MintParams({
+            sender: alice,
+            token: tokenAddress,
+            mintAmount: 0
+        });
 
-        (responseCode, newTotalSupply, serialNumbers) = htsPrecompile.mintToken(tokenAddress, 1, NULL_BYTES);
+        mintResponse = _doMintViaHtsPrecompile(mintParams);
+        serialIdU256 = uint64(mintResponse.serialId);
 
-        uint mintedSerialNumber = uint64(serialNumbers[0]);
+        assertEq(mintResponse.success, true, "expected success since alice is supply key");
 
-        vm.stopPrank();
+        success = _doAssociateViaHtsPrecompile(bob, tokenAddress);
+        assertEq(success, true, "bob should have associated with token");
 
-        vm.prank(bob);
-        responseCode = htsPrecompile.associateToken(bob, tokenAddress);
-        assertEq(responseCode, HederaResponseCodes.SUCCESS, 'expected bob to associate with token');
-        assertEq(htsPrecompile.isAssociated(bob, tokenAddress), true, 'expected bob to be associated with token');
+        TransferParams memory transferParams;
 
-        vm.startPrank(alice);
+        transferParams = TransferParams({
+            sender: alice,
+            token: tokenAddress,
+            from: alice,
+            to: bob,
+            amountOrSerialNumber: serialIdU256
+        });
 
-        hederaNonFungibleToken.transferFrom(alice, bob, mintedSerialNumber);
+        (success, ) = _doTransferDirectly(transferParams);
+        assertEq(success, true, 'expected success');
 
-        {
+        burnParams = BurnParams({
+            sender: alice,
+            token: tokenAddress,
+            amountOrSerialNumber: mintResponse.serialId
+        });
 
-            (responseCode, newTotalSupply) = htsPrecompile.burnToken(tokenAddress, 0, serialNumbers);
-            assertEq(
-                responseCode,
-                HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE,
-                'expected burn to fail since alice is not wipe key to wipe the NFT owned by bob'
-            );
+        (success, ) = _doBurnViaHtsPrecompile(burnParams);
+        assertEq(success, false, "burn should fail, since treasury does not own nft");
 
-            vm.stopPrank();
-            vm.prank(bob);
-            hederaNonFungibleToken.transferFrom(bob, alice, mintedSerialNumber); // transfer back to treasury
+        transferParams = TransferParams({
+            sender: bob,
+            token: tokenAddress,
+            from: bob,
+            to: alice,
+            amountOrSerialNumber: serialIdU256
+        });
 
-            address newOwner = hederaNonFungibleToken.ownerOf(mintedSerialNumber);
-            assertEq(newOwner, alice, "expected alice to be the new owner");
+        (success, ) = _doTransferDirectly(transferParams);
+        assertEq(success, true, 'expected success');
 
-            vm.startPrank(alice);
-            (responseCode, newTotalSupply) = htsPrecompile.burnToken(tokenAddress, 0, serialNumbers);
-            assertEq(responseCode, HederaResponseCodes.SUCCESS, 'expected success since alice is treasury');
-        }
+        burnParams = BurnParams({
+            sender: alice,
+            token: tokenAddress,
+            amountOrSerialNumber: mintResponse.serialId
+        });
+
+        (success, ) = _doBurnViaHtsPrecompile(burnParams);
+        assertEq(success, true, "burn should succeed");
     }
 
     // negative cases

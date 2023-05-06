@@ -232,10 +232,24 @@ contract HederaFungibleTokenTest is HederaTokenUtils, HederaFungibleTokenUtils, 
 
         int64 burnAmount = 1e8;
 
-        (success, ) = _doBurnViaHtsPrecompile(bob, tokenAddress, burnAmount);
+        BurnParams memory burnParams;
+
+        burnParams = BurnParams({
+            sender: bob,
+            token: tokenAddress,
+            amountOrSerialNumber: burnAmount
+        });
+
+        (success, ) = _doBurnViaHtsPrecompile(burnParams);
         assertEq(success, false, "expected burn to fail since bob is not treasury");
 
-        (success, ) = _doBurnViaHtsPrecompile(alice, tokenAddress, burnAmount);
+        burnParams = BurnParams({
+            sender: alice,
+            token: tokenAddress,
+            amountOrSerialNumber: burnAmount
+        });
+
+        (success, ) = _doBurnViaHtsPrecompile(burnParams);
         assertEq(success, true, "expected mint to succeed");
     }
 
