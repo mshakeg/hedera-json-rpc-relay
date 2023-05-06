@@ -4,10 +4,11 @@ pragma solidity ^0.8.13;
 import 'openzeppelin-contracts/contracts/token/ERC20/ERC20.sol';
 
 import "../src/SimpleVault.sol";
+import { ExchangeRateUtils } from './utils/ExchangeRateUtils.sol';
 import { HederaTokenUtils } from './utils/HederaTokenUtils.sol';
 import { HederaFungibleTokenUtils } from './utils/HederaFungibleTokenUtils.sol';
 
-contract SimpleVaultTest is HederaFungibleTokenUtils {
+contract SimpleVaultTest is HederaFungibleTokenUtils, ExchangeRateUtils {
 
     SimpleVault public simpleVault;
     address tokenA;
@@ -16,6 +17,7 @@ contract SimpleVaultTest is HederaFungibleTokenUtils {
     // setUp is executed before each and every test function
     function setUp() public {
         _setUpHtsPrecompileMock();
+        _setUpExchangeRatePrecompileMock();
         _setUpAccounts();
 
         simpleVault = new SimpleVault();
@@ -36,7 +38,7 @@ contract SimpleVaultTest is HederaFungibleTokenUtils {
         uint senderStartingTokenBalance = erc20Token.balanceOf(sender);
         uint senderStartingVaultBalance = simpleVault.vaultBalances(token, sender);
 
-        simpleVault.deposit(token, amount);
+        simpleVault.deposit{value: 2e8}(token, amount);
 
         uint senderFinalTokenBalance = erc20Token.balanceOf(sender);
         uint senderFinalVaultBalance = simpleVault.vaultBalances(token, sender);
@@ -59,7 +61,7 @@ contract SimpleVaultTest is HederaFungibleTokenUtils {
         uint senderStartingTokenBalance = erc20Token.balanceOf(sender);
         uint senderStartingVaultBalance = simpleVault.vaultBalances(token, sender);
 
-        simpleVault.withdraw(token, amount);
+        simpleVault.withdraw{value: 1e8}(token, amount);
 
         uint senderFinalTokenBalance = erc20Token.balanceOf(sender);
         uint senderFinalVaultBalance = simpleVault.vaultBalances(token, sender);
@@ -95,7 +97,7 @@ contract SimpleVaultTest is HederaFungibleTokenUtils {
         uint senderStartingWithdrawTokenBalance = erc20WithdrawToken.balanceOf(depositAndWithdrawParams.sender);
         uint senderStartingWithdrawVaultBalance = simpleVault.vaultBalances(depositAndWithdrawParams.withdrawToken, depositAndWithdrawParams.sender);
 
-        simpleVault.depositAndWithdraw(depositAndWithdrawParams.depositToken, depositAndWithdrawParams.depositAmount, depositAndWithdrawParams.withdrawToken, depositAndWithdrawParams.withdrawAmount);
+        simpleVault.depositAndWithdraw{value: 3e8}(depositAndWithdrawParams.depositToken, depositAndWithdrawParams.depositAmount, depositAndWithdrawParams.withdrawToken, depositAndWithdrawParams.withdrawAmount);
 
         uint senderFinalDepositTokenBalance = erc20DepositToken.balanceOf(depositAndWithdrawParams.sender);
         uint senderFinalDepositVaultBalance = simpleVault.vaultBalances(depositAndWithdrawParams.depositToken, depositAndWithdrawParams.sender);
