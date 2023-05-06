@@ -5,9 +5,23 @@ import 'forge-std/Test.sol';
 
 /// generic test utils
 abstract contract CommonUtils is Test {
+
+    address internal alice = vm.addr(1);
+    address internal bob = vm.addr(2);
+    address internal carol = vm.addr(3);
+    address internal dave = vm.addr(4);
+
     modifier setPranker(address pranker) {
         vm.startPrank(pranker);
         _;
         vm.stopPrank();
     }
+
+    function _setUpAccounts() internal {
+        vm.deal(alice, 100 ether);
+        vm.deal(bob, 100 ether);
+        vm.deal(carol, 100 ether);
+        vm.deal(dave, 100 ether);
+    }
+
 }

@@ -10,22 +10,13 @@ import './mocks/hts-precompile/HtsPrecompileMock.sol';
 import './utils/HederaNonFungibleTokenUtils.sol';
 
 contract HederaNonFungibleTokenTest is HederaNonFungibleTokenUtils, KeyHelper {
-    address alice = vm.addr(1);
-    address bob = vm.addr(2);
-    address carol = vm.addr(3);
-    address dave = vm.addr(4);
 
     address constant ADDRESS_ZERO = address(0);
 
     // setUp is executed before each and every test function
     function setUp() public {
-
         _setUpHtsPrecompileMock();
-
-        vm.deal(alice, 100 ether);
-        vm.deal(bob, 100 ether);
-        vm.deal(carol, 100 ether);
-        vm.deal(dave, 100 ether);
+        _setUpAccounts();
     }
 
     // positive cases
