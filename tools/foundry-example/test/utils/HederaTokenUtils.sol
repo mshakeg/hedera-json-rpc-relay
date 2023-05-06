@@ -597,10 +597,10 @@ abstract contract HederaTokenUtils is Test, CommonUtils {
             serialNumbers[0] = burnParams.amountOrSerialNumber; // only burn 1 NFT at a time
             preBurnInfo.owner = hederaNonFungibleToken.ownerOf(burnChecks.amountOrSerialNumberU256);
             burnParams.amountOrSerialNumber = 0;
-        }
 
-        if (burnParams.sender != preBurnInfo.owner) {
-            burnChecks.expectedResponseCode = HederaResponseCodes.SENDER_DOES_NOT_OWN_NFT_SERIAL_NO;
+            if (burnParams.sender != preBurnInfo.owner) {
+                burnChecks.expectedResponseCode = HederaResponseCodes.SENDER_DOES_NOT_OWN_NFT_SERIAL_NO;
+            }
         }
 
         if (treasury != burnParams.sender) {
