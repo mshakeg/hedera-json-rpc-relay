@@ -85,6 +85,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         return _isFungible[token] || _isNonFungible[token];
     }
 
+    /// @dev Hedera appears to have phased out authorization from the EOA with https://github.com/hashgraph/hedera-services/releases/tag/v0.36.0
     function _isAccountOriginOrSender(address account) internal view returns (bool) {
         return _isAccountOrigin(account) || _isAccountSender(account);
     }
@@ -110,56 +111,56 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     function _hasTreasurySig(address token) internal view returns (bool validKey, bool noKey) {
         address key = _getTreasuryAccount(token);
         noKey = key == ADDRESS_ZERO;
-        validKey = _isAccountOriginOrSender(key);
+        validKey = _isAccountSender(key);
     }
 
     // Check if the admin key signature is valid
     function _hasAdminKeySig(address token) internal view returns (bool validKey, bool noKey) {
         address key = getKey(token, KeyHelper.KeyType.ADMIN);
         noKey = key == ADDRESS_ZERO;
-        validKey = _isAccountOriginOrSender(key);
+        validKey = _isAccountSender(key);
     }
 
     // Check if the kyc key signature is valid
     function _hasKycKeySig(address token) internal view returns (bool validKey, bool noKey) {
         address key = getKey(token, KeyHelper.KeyType.KYC);
         noKey = key == ADDRESS_ZERO;
-        validKey = _isAccountOriginOrSender(key);
+        validKey = _isAccountSender(key);
     }
 
     // Check if the freeze key signature is valid
     function _hasFreezeKeySig(address token) internal view returns (bool validKey, bool noKey) {
         address key = getKey(token, KeyHelper.KeyType.FREEZE);
         noKey = key == ADDRESS_ZERO;
-        validKey = _isAccountOriginOrSender(key);
+        validKey = _isAccountSender(key);
     }
 
     // Check if the wipe key signature is valid
     function _hasWipeKeySig(address token) internal view returns (bool validKey, bool noKey) {
         address key = getKey(token, KeyHelper.KeyType.WIPE);
         noKey = key == ADDRESS_ZERO;
-        validKey = _isAccountOriginOrSender(key);
+        validKey = _isAccountSender(key);
     }
 
     // Check if the supply key signature is valid
     function _hasSupplyKeySig(address token) internal view returns (bool validKey, bool noKey) {
         address key = getKey(token, KeyHelper.KeyType.SUPPLY);
         noKey = key == ADDRESS_ZERO;
-        validKey = _isAccountOriginOrSender(key);
+        validKey = _isAccountSender(key);
     }
 
     // Check if the fee schedule key signature is valid
     function _hasFeeScheduleKeySig(address token) internal view returns (bool validKey, bool noKey) {
         address key = getKey(token, KeyHelper.KeyType.FEE);
         noKey = key == ADDRESS_ZERO;
-        validKey = _isAccountOriginOrSender(key);
+        validKey = _isAccountSender(key);
     }
 
     // Check if the pause key signature is valid
     function _hasPauseKeySig(address token) internal view returns (bool validKey, bool noKey) {
         address key = getKey(token, KeyHelper.KeyType.PAUSE);
         noKey = key == ADDRESS_ZERO;
-        validKey = _isAccountOriginOrSender(key);
+        validKey = _isAccountSender(key);
     }
 
     function _setFungibleTokenInfo(FungibleTokenInfo memory fungibleTokenInfo) internal returns (address treasury) {
@@ -468,7 +469,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
 
         // If transfer request is not from owner then check allowance of msg.sender
         bool shouldAssumeRequestFromOwner = spender == ADDRESS_ZERO;
-        isRequestFromOwner = _isAccountOriginOrSender(from) || shouldAssumeRequestFromOwner;
+        isRequestFromOwner = _isAccountSender(from) || shouldAssumeRequestFromOwner;
 
         if (isRequestFromOwner) {
             return (HederaResponseCodes.SUCCESS, true);

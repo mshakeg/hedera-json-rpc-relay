@@ -11,6 +11,7 @@ import { HederaFungibleTokenUtils } from './utils/HederaFungibleTokenUtils.sol';
 contract SimpleVaultTest is HederaFungibleTokenUtils, ExchangeRateUtils {
 
     SimpleVault public simpleVault;
+    address public simpleVaultAddress;
     address tokenA;
     address tokenB;
 
@@ -21,6 +22,7 @@ contract SimpleVaultTest is HederaFungibleTokenUtils, ExchangeRateUtils {
         _setUpAccounts();
 
         simpleVault = new SimpleVault();
+        simpleVaultAddress = address(simpleVault);
 
         IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](0);
         tokenA = _createSimpleMockFungibleToken(alice, keys);
@@ -135,7 +137,9 @@ contract SimpleVaultTest is HederaFungibleTokenUtils, ExchangeRateUtils {
 
         _doTransferDirectly(transferParams);
 
-        _doAssociateViaHtsPrecompile(address(simpleVault), token);
+        _doAssociateViaHtsPrecompile(simpleVaultAddress, token);
+
+        _doApproveDirectly(bob, token, simpleVaultAddress, amount);
 
         amount = 1e4;
         _depositToSimpleVault(bob, token, uint64(amount));
@@ -160,7 +164,9 @@ contract SimpleVaultTest is HederaFungibleTokenUtils, ExchangeRateUtils {
 
         _doTransferDirectly(transferParams);
 
-        _doAssociateViaHtsPrecompile(address(simpleVault), token);
+        _doAssociateViaHtsPrecompile(simpleVaultAddress, token);
+
+        _doApproveDirectly(bob, token, simpleVaultAddress, amount);
 
         _depositToSimpleVault(bob, token, uint64(amount)); // first deposit before withdraw
 
@@ -200,8 +206,11 @@ contract SimpleVaultTest is HederaFungibleTokenUtils, ExchangeRateUtils {
 
         _doTransferDirectly(transferParams);
 
-        _doAssociateViaHtsPrecompile(address(simpleVault), depositToken);
-        _doAssociateViaHtsPrecompile(address(simpleVault), withdrawToken);
+        _doAssociateViaHtsPrecompile(simpleVaultAddress, depositToken);
+        _doAssociateViaHtsPrecompile(simpleVaultAddress, withdrawToken);
+
+        _doApproveDirectly(bob, depositToken, simpleVaultAddress, 1e18);
+        _doApproveDirectly(bob, withdrawToken, simpleVaultAddress, 1e18);
 
         _depositToSimpleVault(bob, withdrawToken, uint64(amount)); // first deposit before withdraw
 
@@ -214,6 +223,8 @@ contract SimpleVaultTest is HederaFungibleTokenUtils, ExchangeRateUtils {
             withdrawToken: withdrawToken,
             withdrawAmount: uint64(withdrawAmount)
         });
+
+        _depositAndWithdraw(depositAndWithdrawParams);
     }
 
     // negative cases:
