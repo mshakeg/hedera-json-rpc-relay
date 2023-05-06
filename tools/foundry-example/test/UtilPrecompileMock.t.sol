@@ -1,14 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import 'hedera-smart-contracts/hts-precompile/IHederaTokenService.sol';
-import 'hedera-smart-contracts/hts-precompile/HederaResponseCodes.sol';
-import 'hedera-smart-contracts/hts-precompile/KeyHelper.sol';
-import './mocks/hts-precompile/HederaNonFungibleToken.sol';
-import './mocks/hts-precompile/HtsPrecompileMock.sol';
-
 import './utils/UtilUtils.sol';
-import './libraries/Constants.sol';
 
 contract UtilPrecompileMockTest is UtilUtils {
 
