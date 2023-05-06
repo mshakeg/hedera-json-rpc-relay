@@ -126,29 +126,6 @@ contract HederaFungibleTokenUtils is CommonUtils, HederaTokenUtils {
         );
     }
 
-    function _doAssociateViaHtsPrecompile(
-        address sender,
-        address token
-    ) internal setPranker(sender) returns (bool success) {
-        bool isInitiallyAssociated = htsPrecompile.isAssociated(sender, token);
-        int64 responseCode = htsPrecompile.associateToken(sender, token);
-        success = responseCode == HederaResponseCodes.SUCCESS;
-
-        int64 expectedResponseCode;
-
-        if (isInitiallyAssociated) {
-            expectedResponseCode = HederaResponseCodes.TOKEN_ALREADY_ASSOCIATED_TO_ACCOUNT;
-        }
-
-        if (!isInitiallyAssociated) {
-            expectedResponseCode = HederaResponseCodes.SUCCESS;
-        }
-
-        bool isFinallyAssociated = htsPrecompile.isAssociated(sender, token);
-
-        assertEq(responseCode, expectedResponseCode, 'expected response code does not match actual response code');
-    }
-
     function _doApproveViaHtsPrecompile(
         address sender,
         address token,
@@ -384,88 +361,6 @@ contract HederaFungibleTokenUtils is CommonUtils, HederaTokenUtils {
                     'spender allowance changed unexpectedly'
                 );
             }
-        }
-    }
-
-    struct MintKeys {
-        address supplyKey;
-        address treasury;
-    }
-
-    struct MintInfo {
-        uint256 totalSupply;
-        uint256 treasuryBalance;
-    }
-
-    function _doMintViaHtsPrecompile(
-        address sender,
-        address token,
-        int64 mintAmount
-    ) internal setPranker(sender) returns (bool success, int64 responseCode) {
-        uint256 mintAmountU256 = uint64(mintAmount);
-
-        HederaFungibleToken hederaFungibleToken = HederaFungibleToken(token);
-
-        bytes[] memory NULL_BYTES = new bytes[](1);
-
-        int64 newTotalSupply;
-        int64[] memory serialNumbers;
-
-        int64 expectedResponseCode = HederaResponseCodes.SUCCESS; // assume SUCCESS initially and later overwrite error code accordingly
-
-        MintKeys memory mintKeys = MintKeys({
-            supplyKey: htsPrecompile.getKey(token, KeyHelper.KeyType.SUPPLY),
-            treasury: htsPrecompile.getTreasuryAccount(token)
-        });
-
-        MintInfo memory preMintInfo = MintInfo({
-            totalSupply: hederaFungibleToken.totalSupply(),
-            treasuryBalance: hederaFungibleToken.balanceOf(mintKeys.treasury)
-        });
-
-        if (mintKeys.supplyKey != sender) {
-            expectedResponseCode = HederaResponseCodes.INVALID_SUPPLY_KEY;
-        }
-
-        if (mintKeys.supplyKey == address(0)) {
-            expectedResponseCode = HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY;
-        }
-
-        (responseCode, newTotalSupply, serialNumbers) = htsPrecompile.mintToken(token, mintAmount, NULL_BYTES);
-
-        assertEq(expectedResponseCode, responseCode, 'expected response code does not equal actual response code');
-
-        success = responseCode == HederaResponseCodes.SUCCESS;
-
-        MintInfo memory postMintInfo = MintInfo({
-            totalSupply: hederaFungibleToken.totalSupply(),
-            treasuryBalance: hederaFungibleToken.balanceOf(mintKeys.treasury)
-        });
-
-        if (success) {
-            assertEq(
-                preMintInfo.totalSupply + mintAmountU256,
-                postMintInfo.totalSupply,
-                'expected total supply to increase by mint amount'
-            );
-            assertEq(
-                preMintInfo.treasuryBalance + mintAmountU256,
-                postMintInfo.treasuryBalance,
-                'expected treasury balance to increase by mint amount'
-            );
-        }
-
-        if (!success) {
-            assertEq(
-                preMintInfo.totalSupply,
-                postMintInfo.totalSupply,
-                'expected total supply to not change if failed'
-            );
-            assertEq(
-                preMintInfo.treasuryBalance,
-                postMintInfo.treasuryBalance,
-                'expected treasury balance to not change if failed'
-            );
         }
     }
 

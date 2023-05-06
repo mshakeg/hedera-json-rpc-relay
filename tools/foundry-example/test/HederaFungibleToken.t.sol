@@ -200,11 +200,26 @@ contract HederaFungibleTokenTest is HederaTokenUtils, HederaFungibleTokenUtils, 
 
         int64 mintAmount = 1e8;
 
-        (success, ) = _doMintViaHtsPrecompile(bob, tokenAddress, mintAmount);
-        assertEq(success, false, "expected mint to fail since bob is not supply key");
+        MintResponse memory mintResponse;
+        MintParams memory mintParams;
 
-        (success, ) = _doMintViaHtsPrecompile(alice, tokenAddress, mintAmount);
-        assertEq(success, true, "expected mint to succeed");
+        mintParams = MintParams({
+            sender: bob,
+            token: tokenAddress,
+            mintAmount: mintAmount
+        });
+
+        mintResponse = _doMintViaHtsPrecompile(mintParams);
+        assertEq(mintResponse.success, false, "expected mint to fail since bob is not supply key");
+
+        mintParams = MintParams({
+            sender: alice,
+            token: tokenAddress,
+            mintAmount: mintAmount
+        });
+
+        mintResponse = _doMintViaHtsPrecompile(mintParams);
+        assertEq(mintResponse.success, true, "expected mint to succeed");
     }
 
     /// @dev there is no test_CanBurnDirectly as the ERC20 standard does not typically allow direct burns

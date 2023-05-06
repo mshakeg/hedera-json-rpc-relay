@@ -122,4 +122,59 @@ contract HederaNonFungibleTokenUtils is CommonUtils, HederaTokenUtils {
 
     }
 
+    function _createSimpleMockNonFungibleToken(
+        address sender,
+        IHederaTokenService.TokenKey[] memory keys
+    ) internal returns (address tokenAddress) {
+
+        string memory name = 'NFT A';
+        string memory symbol = 'NFT-A';
+        address treasury = sender;
+
+        (, tokenAddress) = _doCreateHederaNonFungibleTokenDirectly(sender, name, symbol, treasury, keys);
+    }
+
+    struct ApproveNftParams {
+        address sender;
+        address token;
+        address spender;
+        int64 serialId;
+    }
+
+    struct ApproveNftInfo {
+        address owner;
+        address spender;
+        uint256 serialIdU256;
+    }
+
+    function _doApproveNftViaHtsPrecompile(ApproveNftParams memory approveNftParams) internal setPranker(approveNftParams.sender) returns (bool success) {
+
+        int64 expectedResponseCode = HederaResponseCodes.SUCCESS;
+        int64 responseCode;
+
+        ApproveNftInfo memory approveNftInfo;
+
+        HederaNonFungibleToken hederaNonFungibleToken = HederaNonFungibleToken(approveNftParams.token);
+
+        approveNftInfo.serialIdU256 = uint64(approveNftParams.serialId);
+        approveNftInfo.owner = hederaNonFungibleToken.ownerOf(approveNftInfo.serialIdU256);
+
+        if (approveNftParams.sender != approveNftInfo.owner) {
+            expectedResponseCode = HederaResponseCodes.SENDER_DOES_NOT_OWN_NFT_SERIAL_NO;
+        }
+
+        responseCode = htsPrecompile.approveNFT(approveNftParams.token, approveNftParams.spender, approveNftInfo.serialIdU256);
+
+        assertEq(responseCode, expectedResponseCode, "expected response code does not equal actual response code");
+
+        success = responseCode == HederaResponseCodes.SUCCESS;
+
+        approveNftInfo.spender = hederaNonFungibleToken.getApproved(approveNftInfo.serialIdU256);
+
+        if (success) {
+            assertEq(approveNftInfo.spender, approveNftParams.spender, "spender was not correctly updated");
+        }
+
+    }
+
 }

@@ -74,76 +74,61 @@ contract HederaNonFungibleTokenTest is HederaNonFungibleTokenUtils, KeyHelper {
 
     }
 
-    function test_ApproveViaHtsPrecompile() public setPranker(alice) {
+    function test_ApproveViaHtsPrecompile() public {
 
         bytes[] memory NULL_BYTES = new bytes[](1);
 
-        IHederaTokenService.TokenInfo memory nftTokenInfo = _getSimpleHederaNftTokenInfo(
-            'NFT A',
-            'NFT-A',
-            alice
-        );
-
-        IHederaTokenService.HederaToken memory token = nftTokenInfo.token;
-
         IHederaTokenService.TokenKey[] memory keys = new IHederaTokenService.TokenKey[](1);
         keys[0] = KeyHelper.getSingleKey(KeyHelper.KeyType.SUPPLY, KeyHelper.KeyValueType.CONTRACT_ID, alice);
+        address tokenAddress = _createSimpleMockNonFungibleToken(alice, keys);
 
-        nftTokenInfo.token.tokenKeys = keys;
+        bool success;
 
-        /// @dev no need to register newly created HederaNonFungibleToken in this context as the constructor will call HtsPrecompileMock#registerHederaNonFungibleToken
-        HederaNonFungibleToken hederaNonFungibleToken = new HederaNonFungibleToken(nftTokenInfo);
-        address tokenAddress = address(hederaNonFungibleToken);
+        MintResponse memory mintResponse;
+        MintParams memory mintParams;
 
-        uint approveNftSerialId = 1;
+        mintParams = MintParams({
+            sender: bob,
+            token: tokenAddress,
+            mintAmount: 0
+        });
 
-        (int64 responseCode, int64 newTotalSupply, int64[] memory serialNumbers) = htsPrecompile.mintToken(tokenAddress, 1, NULL_BYTES);
+        mintResponse = _doMintViaHtsPrecompile(mintParams);
+        assertEq(mintResponse.success, false, "expected failure since bob is not supply key");
 
-        uint mintedSerialNumber = uint64(serialNumbers[0]);
+        mintParams = MintParams({
+            sender: alice,
+            token: tokenAddress,
+            mintAmount: 0
+        });
 
-        assertEq(
-            responseCode,
-            HederaResponseCodes.SUCCESS,
-            'expected NFT to be minted'
-        );
+        mintResponse = _doMintViaHtsPrecompile(mintParams);
+        assertEq(mintResponse.success, true, "expected success since alice is supply key");
 
-        assertEq(newTotalSupply, 1, 'expected NFT supply to be 1 after first mint');
+        success = _doAssociateViaHtsPrecompile(bob, tokenAddress);
+        assertEq(success, true, "bob should have associated with token");
 
-        assertEq(mintedSerialNumber, approveNftSerialId, 'expected first NFT mint to have serialNumber of 1');
+        ApproveNftParams memory approveNftParams;
 
-        address approvedAccount = hederaNonFungibleToken.getApproved(approveNftSerialId);
+        approveNftParams = ApproveNftParams({
+            sender: bob,
+            token: tokenAddress,
+            spender: carol,
+            serialId: mintResponse.serialId
+        });
 
-        assertEq(approvedAccount, ADDRESS_ZERO, 'expected approved account to be address(0)');
+        success = _doApproveNftViaHtsPrecompile(approveNftParams);
+        assertEq(success, false, "should have failed as bob does not own NFT with serialId");
 
-        responseCode = htsPrecompile.approveNFT(tokenAddress, bob, approveNftSerialId);
+        approveNftParams = ApproveNftParams({
+            sender: alice,
+            token: tokenAddress,
+            spender: carol,
+            serialId: mintResponse.serialId
+        });
 
-        assertEq(
-            responseCode,
-            HederaResponseCodes.TOKEN_NOT_ASSOCIATED_TO_ACCOUNT,
-            'expected to not approve due to bob not being associated'
-        );
-
-        vm.stopPrank();
-        vm.prank(bob);
-
-        responseCode = htsPrecompile.associateToken(bob, tokenAddress);
-        assertEq(responseCode, HederaResponseCodes.SUCCESS, 'expected bob to associate with token');
-
-        assertEq(htsPrecompile.isAssociated(bob, tokenAddress), true, 'expected bob to be associated with token');
-
-        vm.startPrank(alice);
-
-        responseCode = htsPrecompile.approveNFT(tokenAddress, bob, approveNftSerialId);
-
-        assertEq(
-            responseCode,
-            HederaResponseCodes.SUCCESS,
-            "expected bob to be given NFT approval for alice's NFT"
-        );
-
-        approvedAccount = hederaNonFungibleToken.getApproved(approveNftSerialId);
-
-        assertEq(approvedAccount, bob, "bob's expected NFT approval not set correctly");
+        success = _doApproveNftViaHtsPrecompile(approveNftParams);
+        assertEq(success, true, "should have succeeded as alice does own NFT with serialId");
     }
 
     function test_ApproveDirectly() public setPranker(alice) {

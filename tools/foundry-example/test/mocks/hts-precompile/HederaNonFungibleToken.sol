@@ -21,7 +21,7 @@ contract HederaNonFungibleToken is ERC721 {
         int64 burned;
     }
 
-    NFTCounter public nftCount;
+    NFTCounter internal nftCount;
 
     /// @dev NonFungibleTokenInfo is for each NFT(with a unique serial number) that is minted; however TokenInfo covers the common token info across all instances
     constructor(
@@ -157,6 +157,10 @@ contract HederaNonFungibleToken is ERC721 {
 
     function isApprovedOrOwner(address spender, uint256 tokenId) external view returns (bool) {
         return _isApprovedOrOwner(spender, tokenId);
+    }
+
+    function mintCount() external view returns (int64 minted) {
+        minted = nftCount.minted;
     }
 
 }

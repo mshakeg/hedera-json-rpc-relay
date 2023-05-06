@@ -273,11 +273,12 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     /// @dev for both Fungible and NonFungible
     function _precheckApprove(
         address token,
-        address owner,
+        address sender, // sender should be owner in order to approve
         address spender,
         uint256 amountOrSerialNumber /// for Fungible is the amount and for NonFungible is the serialNumber
     ) internal view returns (int64 responseCode) {
-        CommonPrecheckData memory commonPrecheckData = _getCommonPrecheckData(token, spender, owner, ADDRESS_ZERO);
+
+        CommonPrecheckData memory commonPrecheckData = _getCommonPrecheckData(token, sender, sender, ADDRESS_ZERO);
 
         /// @dev Hedera does not require an account to be associated with a token in be approved an allowance
         // if (!_association[token][owner] || !_association[token][spender]) {
@@ -293,6 +294,14 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
 
         if (!commonPrecheckData.isFungible && !commonPrecheckData.isNonFungible) {
             return HederaResponseCodes.INVALID_TOKEN_ID;
+        }
+
+        if (commonPrecheckData.isNonFungible) {
+            int64 serialNumber = int64(uint64(amountOrSerialNumber));
+            PartialNonFungibleTokenInfo memory partialNonFungibleTokenInfo = _partialNonFungibleTokenInfos[token][serialNumber];
+            if (partialNonFungibleTokenInfo.ownerId != sender) {
+                return HederaResponseCodes.SENDER_DOES_NOT_OWN_NFT_SERIAL_NO;
+            }
         }
 
         return HederaResponseCodes.SUCCESS;
