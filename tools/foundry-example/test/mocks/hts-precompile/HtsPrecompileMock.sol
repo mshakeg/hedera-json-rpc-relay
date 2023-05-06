@@ -487,21 +487,21 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     }
 
     function preApprove(
-        address owner,
+        address sender, // msg.sender in the context of the Hedera{Non|}FungibleToken; it should be owner for SUCCESS
         address spender,
         uint256 amountOrSerialNumber /// for Fungible is the amount and for NonFungible is the serialNumber
     ) external onlyHederaToken returns (int64 responseCode) {
         address token = msg.sender;
-        responseCode = _precheckApprove(token, owner, spender, amountOrSerialNumber);
+        responseCode = _precheckApprove(token, sender, spender, amountOrSerialNumber);
     }
 
     function preSetApprovalForAll(
-        address owner,
+        address sender, // msg.sender in the context of the Hedera{Non|}FungibleToken; it should be owner for SUCCESS
         address operator,
         bool approved
     ) external onlyHederaToken returns (int64 responseCode) {
         address token = msg.sender;
-        responseCode = _precheckSetApprovalForAll(token, owner, operator, approved);
+        responseCode = _precheckSetApprovalForAll(token, sender, operator, approved);
     }
 
     /// @dev not currently called by Hedera{}Token

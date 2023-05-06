@@ -27,7 +27,8 @@ contract HederaNonFungibleToken is ERC721 {
     constructor(
         IHederaTokenService.TokenInfo memory _nftTokenInfo
     ) ERC721(_nftTokenInfo.token.name, _nftTokenInfo.token.symbol) {
-        HtsPrecompile.registerHederaNonFungibleToken(msg.sender, _nftTokenInfo);
+        address sender = msg.sender;
+        HtsPrecompile.registerHederaNonFungibleToken(sender, _nftTokenInfo);
     }
 
     /// @dev the HtsPrecompileMock should do precheck validation before calling any function with this modifier
@@ -105,9 +106,9 @@ contract HederaNonFungibleToken is ERC721 {
 
     // standard ERC721 functions overriden for HtsPrecompileMock prechecks:
     function approve(address to, uint256 tokenId) public override {
-        address owner = _ownerOf(tokenId);
+        address sender = msg.sender;
         address spender = to;
-        int64 responseCode = HtsPrecompile.preApprove(owner, spender, tokenId);
+        int64 responseCode = HtsPrecompile.preApprove(sender, spender, tokenId);
         if (responseCode != HederaResponseCodes.SUCCESS) {
             revert HtsPrecompileError(responseCode);
         }
@@ -118,8 +119,8 @@ contract HederaNonFungibleToken is ERC721 {
     }
 
     function setApprovalForAll(address operator, bool approved) public override {
-        address owner = msg.sender;
-        int64 responseCode = HtsPrecompile.preSetApprovalForAll(owner, operator, approved);
+        address sender = msg.sender;
+        int64 responseCode = HtsPrecompile.preSetApprovalForAll(sender, operator, approved);
         if (responseCode != HederaResponseCodes.SUCCESS) {
             revert HtsPrecompileError(responseCode);
         }
@@ -127,7 +128,8 @@ contract HederaNonFungibleToken is ERC721 {
     }
 
     function transferFrom(address from, address to, uint256 tokenId) public override {
-        int64 responseCode = HtsPrecompile.preTransfer(msg.sender, from, to, tokenId);
+        address sender = msg.sender;
+        int64 responseCode = HtsPrecompile.preTransfer(sender, from, to, tokenId);
         if (responseCode != HederaResponseCodes.SUCCESS) {
             revert HtsPrecompileError(responseCode);
         }
@@ -135,7 +137,8 @@ contract HederaNonFungibleToken is ERC721 {
     }
 
     function safeTransferFrom(address from, address to, uint256 tokenId) public override {
-        int64 responseCode = HtsPrecompile.preTransfer(msg.sender, from, to, tokenId);
+        address sender = msg.sender;
+        int64 responseCode = HtsPrecompile.preTransfer(sender, from, to, tokenId);
         if (responseCode != HederaResponseCodes.SUCCESS) {
             revert HtsPrecompileError(responseCode);
         }
@@ -143,7 +146,8 @@ contract HederaNonFungibleToken is ERC721 {
     }
 
     function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public override {
-        int64 responseCode = HtsPrecompile.preTransfer(msg.sender, from, to, tokenId);
+        address sender = msg.sender;
+        int64 responseCode = HtsPrecompile.preTransfer(sender, from, to, tokenId);
         if (responseCode != HederaResponseCodes.SUCCESS) {
             revert HtsPrecompileError(responseCode);
         }

@@ -177,4 +177,43 @@ contract HederaNonFungibleTokenUtils is CommonUtils, HederaTokenUtils {
 
     }
 
+    function _doApproveNftDirectly(ApproveNftParams memory approveNftParams) internal setPranker(approveNftParams.sender) returns (bool success) {
+
+        int64 expectedResponseCode = HederaResponseCodes.SUCCESS;
+        int64 responseCode;
+
+        ApproveNftInfo memory approveNftInfo;
+
+        HederaNonFungibleToken hederaNonFungibleToken = HederaNonFungibleToken(approveNftParams.token);
+
+        approveNftInfo.serialIdU256 = uint64(approveNftParams.serialId);
+        approveNftInfo.owner = hederaNonFungibleToken.ownerOf(approveNftInfo.serialIdU256);
+
+        if (approveNftParams.sender != approveNftInfo.owner) {
+            expectedResponseCode = HederaResponseCodes.SENDER_DOES_NOT_OWN_NFT_SERIAL_NO;
+        }
+
+        if (expectedResponseCode != HederaResponseCodes.SUCCESS) {
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    HederaFungibleToken.HtsPrecompileError.selector,
+                    expectedResponseCode
+                )
+            );
+        }
+
+        hederaNonFungibleToken.approve(approveNftParams.spender, approveNftInfo.serialIdU256);
+
+        if (expectedResponseCode == HederaResponseCodes.SUCCESS) {
+            success = true;
+        }
+
+        approveNftInfo.spender = hederaNonFungibleToken.getApproved(approveNftInfo.serialIdU256);
+
+        if (success) {
+            assertEq(approveNftInfo.spender, approveNftParams.spender, "spender was not correctly updated");
+        }
+
+    }
+
 }
