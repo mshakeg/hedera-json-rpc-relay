@@ -10,7 +10,6 @@ import '../../libraries/Constants.sol';
 
 contract HederaNonFungibleToken is ERC721, Constants {
     error HtsPrecompileError(int64 responseCode);
-    address constant ADDRESS_ZERO = address(0);
 
     HtsPrecompileMock internal constant HtsPrecompile = HtsPrecompileMock(HTS_PRECOMPILE);
 

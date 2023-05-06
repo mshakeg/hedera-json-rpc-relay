@@ -8,10 +8,9 @@ import './mocks/hts-precompile/HederaNonFungibleToken.sol';
 import './mocks/hts-precompile/HtsPrecompileMock.sol';
 
 import './utils/HederaNonFungibleTokenUtils.sol';
+import './libraries/Constants.sol';
 
 contract HederaNonFungibleTokenTest is HederaNonFungibleTokenUtils, KeyHelper {
-
-    address constant ADDRESS_ZERO = address(0);
 
     // setUp is executed before each and every test function
     function setUp() public {

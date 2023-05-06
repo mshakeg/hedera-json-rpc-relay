@@ -117,7 +117,7 @@ abstract contract HederaTokenUtils is Test, CommonUtils, Constants {
             expectedResponseCode = HederaResponseCodes.INVALID_SUPPLY_KEY;
         }
 
-        if (mintKeys.supplyKey == address(0)) {
+        if (mintKeys.supplyKey == ADDRESS_ZERO) {
             expectedResponseCode = HederaResponseCodes.TOKEN_HAS_NO_SUPPLY_KEY;
         }
 
@@ -344,7 +344,7 @@ abstract contract HederaTokenUtils is Test, CommonUtils, Constants {
 
             if (transferChecks.isNonFungible) {
                 assertEq(postTransferInfo.owner, transferParams.to, "expected to to be new owner");
-                assertEq(postTransferInfo.approvedId, address(0), "expected approvedId to be reset");
+                assertEq(postTransferInfo.approvedId, ADDRESS_ZERO, "expected approvedId to be reset");
                 assertEq(postTransferInfo.isSenderOperator, preTransferInfo.isSenderOperator, "operator should not have changed");
             }
         }
@@ -511,7 +511,7 @@ abstract contract HederaTokenUtils is Test, CommonUtils, Constants {
 
             if (transferChecks.isNonFungible) {
                 assertEq(postTransferInfo.owner, transferParams.to, "expected to to be new owner");
-                assertEq(postTransferInfo.approvedId, address(0), "expected approvedId to be reset");
+                assertEq(postTransferInfo.approvedId, ADDRESS_ZERO, "expected approvedId to be reset");
                 assertEq(postTransferInfo.isSenderOperator, preTransferInfo.isSenderOperator, "operator should not have changed");
             }
         }

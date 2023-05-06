@@ -13,7 +13,7 @@ import '../../libraries/Constants.sol';
 
 // TODO: match gas cost/consumption for all mock functions below with gas cost on Hedera
 
-contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper, Constants {
+contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
 
     error HtsPrecompileError(int64 responseCode);
 
@@ -821,15 +821,15 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper, Co
     ) external payable noDelegateCall returns (int64 responseCode, address tokenAddress) {
         responseCode = _preCreateToken(msg.sender, token);
         if (responseCode != HederaResponseCodes.SUCCESS) {
-            return (responseCode, address(0));
+            return (responseCode, ADDRESS_ZERO);
         }
 
         if (decimals < 0 || decimals > 18) {
-            return (HederaResponseCodes.INVALID_TOKEN_DECIMALS, address(0));
+            return (HederaResponseCodes.INVALID_TOKEN_DECIMALS, ADDRESS_ZERO);
         }
 
         if (initialTotalSupply < 0) {
-            return (HederaResponseCodes.INVALID_TOKEN_INITIAL_SUPPLY, address(0));
+            return (HederaResponseCodes.INVALID_TOKEN_INITIAL_SUPPLY, ADDRESS_ZERO);
         }
 
         FungibleTokenInfo memory fungibleTokenInfo;
@@ -851,7 +851,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper, Co
     ) external payable noDelegateCall returns (int64 responseCode, address tokenAddress) {
         responseCode = _preCreateToken(msg.sender, token);
         if (responseCode != HederaResponseCodes.SUCCESS) {
-            return (responseCode, address(0));
+            return (responseCode, ADDRESS_ZERO);
         }
 
         TokenInfo memory tokenInfo;
@@ -872,15 +872,15 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper, Co
     ) external payable noDelegateCall returns (int64 responseCode, address tokenAddress) {
         responseCode = _preCreateToken(msg.sender, token);
         if (responseCode != HederaResponseCodes.SUCCESS) {
-            return (responseCode, address(0));
+            return (responseCode, ADDRESS_ZERO);
         }
 
         if (decimals < 0 || decimals > 18) {
-            return (HederaResponseCodes.INVALID_TOKEN_DECIMALS, address(0));
+            return (HederaResponseCodes.INVALID_TOKEN_DECIMALS, ADDRESS_ZERO);
         }
 
         if (initialTotalSupply < 0) {
-            return (HederaResponseCodes.INVALID_TOKEN_INITIAL_SUPPLY, address(0));
+            return (HederaResponseCodes.INVALID_TOKEN_INITIAL_SUPPLY, ADDRESS_ZERO);
         }
 
         FungibleTokenInfo memory fungibleTokenInfo;
@@ -907,7 +907,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper, Co
     ) external payable noDelegateCall returns (int64 responseCode, address tokenAddress) {
         responseCode = _preCreateToken(msg.sender, token);
         if (responseCode != HederaResponseCodes.SUCCESS) {
-            return (responseCode, address(0));
+            return (responseCode, ADDRESS_ZERO);
         }
 
         TokenInfo memory tokenInfo;
