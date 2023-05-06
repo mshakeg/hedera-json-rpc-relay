@@ -9,11 +9,11 @@ import 'hedera-smart-contracts/hts-precompile/KeyHelper.sol';
 import './HederaFungibleToken.sol';
 import './HederaNonFungibleToken.sol';
 import '../../../src/NoDelegateCall.sol';
+import '../../libraries/Constants.sol';
 
 // TODO: match gas cost/consumption for all mock functions below with gas cost on Hedera
 
-contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
-    address internal constant HTS_PRECOMPILE = address(0x167);
+contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper, Constants {
 
     error HtsPrecompileError(int64 responseCode);
 

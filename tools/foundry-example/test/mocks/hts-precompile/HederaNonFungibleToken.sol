@@ -6,12 +6,12 @@ import 'openzeppelin-contracts/contracts/token/ERC721/ERC721.sol';
 import 'hedera-smart-contracts/hts-precompile/HederaResponseCodes.sol';
 import 'hedera-smart-contracts/hts-precompile/IHederaTokenService.sol';
 import './HtsPrecompileMock.sol';
+import '../../libraries/Constants.sol';
 
-contract HederaNonFungibleToken is ERC721 {
+contract HederaNonFungibleToken is ERC721, Constants {
     error HtsPrecompileError(int64 responseCode);
     address constant ADDRESS_ZERO = address(0);
 
-    address internal constant HTS_PRECOMPILE = address(0x167);
     HtsPrecompileMock internal constant HtsPrecompile = HtsPrecompileMock(HTS_PRECOMPILE);
 
     bool public constant IS_FUNGIBLE = false; /// @dev if HederaFungibleToken then true

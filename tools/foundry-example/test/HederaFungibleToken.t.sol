@@ -6,15 +6,16 @@ import 'hedera-smart-contracts/hts-precompile/KeyHelper.sol';
 import './utils/HederaTokenUtils.sol';
 import './utils/HederaFungibleTokenUtils.sol';
 
-// TODO: refactor for actions to be standalone internal functions with assertions inside
-// TODO: do validation on token at creation
+// TODO: refactor for actions to be standalone internal functions with assertions inside - DONE
 // TODO: complete other precompile contracts implementation and test suite
+// TODO: investigate permissions that tx.origin is granted in precompile mock and adjust authorization accordingly if required
+// TODO: add deploy contracts scripts for hedera testnet and mainnet
+
+// TODO: evaluate code coverage of all tests
+// TODO: do validation on token at creation
 // TODO: do validations in _precheck functions such that never reverts with error strings in ERC{20/721}
 // TODO: investigate ordering of response codes on Hedera and adjust ordering in mocks accordingly
-// TODO: investigate permissions that tx.origin is granted in precompile mock and adjust authorization accordingly if required
 // TODO: test all token keys
-// TODO: evaluate code coverage of all tests
-// TODO: add deploy contracts scripts for hedera testnet and mainnet
 
 contract HederaFungibleTokenTest is HederaTokenUtils, HederaFungibleTokenUtils, KeyHelper {
 
