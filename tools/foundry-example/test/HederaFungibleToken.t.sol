@@ -10,13 +10,14 @@ import './utils/HederaFungibleTokenUtils.sol';
 // DONE - complete other precompile contracts implementation and test suite
 // DONE - investigate permissions that tx.origin is granted in precompile mock and adjust authorization accordingly if required
 
-// TODO: add deploy contracts scripts for hedera testnet and mainnet & document cmd in README.md
+// DONE - add deploy contracts scripts for hedera testnet and mainnet & document cmd in README.md
 
-// TODO: evaluate code coverage of all tests
 // TODO: do validation on token at creation
 // TODO: do validations in _precheck functions such that never reverts with error strings in ERC{20/721}
-// TODO: investigate ordering of response codes on Hedera and adjust ordering in mocks accordingly
+// TODO: search project for all TODOs and prioritize accordingly
 // TODO: test all token keys
+// TODO: investigate ordering of response codes on Hedera and adjust ordering in mocks accordingly
+// TODO: evaluate code coverage of all tests
 
 contract HederaFungibleTokenTest is HederaTokenUtils, HederaFungibleTokenUtils, KeyHelper {
 
