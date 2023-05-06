@@ -17,4 +17,8 @@ abstract contract UtilUtils is Test, CommonUtils, Constants {
         bytes memory code = address(utilPrecompileMock).code;
         vm.etch(Constants.UTIL_PRECOMPILE, code);
     }
+
+    function _doCallPseudorandomSeed(address sender) internal setPranker(sender) returns (bytes32 seed) {
+        seed = utilPrecompile.getPseudorandomSeed();
+    }
 }

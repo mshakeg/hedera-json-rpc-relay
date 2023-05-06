@@ -7,6 +7,10 @@ contract UtilPrecompileMock is IPrngSystemContract {
 
   address internal constant UTIL_PRECOMPILE = address(0x169);
 
-  function getPseudorandomSeed() external returns (bytes32) {}
+  bytes32 internal lastSeed; // to increase pseudorandomness by feeding in the previous seed into latest seed
 
+  function getPseudorandomSeed() external returns (bytes32) {
+    lastSeed = keccak256(abi.encodePacked(lastSeed, block.timestamp, block.number, block.difficulty, msg.sender));
+    return lastSeed;
+  }
 }
