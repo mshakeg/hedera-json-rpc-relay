@@ -11,8 +11,6 @@ import './HederaNonFungibleToken.sol';
 import '../../../src/NoDelegateCall.sol';
 import '../../libraries/Constants.sol';
 
-// TODO: match gas cost/consumption for all mock functions below with gas cost on Hedera
-
 contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
 
     error HtsPrecompileError(int64 responseCode);
@@ -38,7 +36,7 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     mapping(address => mapping(address => bool)) internal _kyc; // is KYCed is the positive case(i.e. explicitly requires KYC approval); see defaultKycStatus
     // HTS token -> account -> isFrozen
     mapping(address => mapping(address => bool)) internal _unfrozen; // is unfrozen is positive case(i.e. explicitly requires being unfrozen); see freezeDefault
-    // HTS token -> keyType -> value e.g. 1 -> 0x123 means that the ADMIN is account 0x123; TODO: consider using KeyValueType instead of uint
+    // HTS token -> keyType -> value e.g. tokenId -> 16 -> 0x123 means that the SUPPLY key for tokenId is account 0x123
     mapping(address => mapping(uint => address)) internal _tokenKeys; /// @dev faster access then getting keys via {FungibleTokenInfo|NonFungibleTokenInfo}#TokenInfo.HederaToken.tokenKeys[]; however only supports KeyValueType.CONTRACT_ID
 
     // this struct avoids duplicating common NFT data, in particular IHederaTokenService.NonFungibleTokenInfo.tokenInfo
@@ -508,6 +506,23 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         bool shouldAssumeRequestFromOwner = spender == ADDRESS_ZERO;
         isRequestFromOwner = _isAccountSender(from) || shouldAssumeRequestFromOwner;
 
+        // do balance checks here even if request is from owner
+        HederaFungibleToken hederaFungibleToken = HederaFungibleToken(token);
+        HederaNonFungibleToken hederaNonFungibleToken = HederaNonFungibleToken(token);
+
+        bool doesFromOwnSufficientToken = commonPrecheckData.isFungible
+            ? (hederaFungibleToken.balanceOf(from) >= amountOrSerialNumber)
+            : (from == hederaNonFungibleToken.ownerOf(amountOrSerialNumber));
+
+        if (!doesFromOwnSufficientToken) {
+            if (commonPrecheckData.isFungible) {
+                return (HederaResponseCodes.INSUFFICIENT_TOKEN_BALANCE, isRequestFromOwner);
+            }
+            if (commonPrecheckData.isNonFungible) {
+                return (HederaResponseCodes.SENDER_DOES_NOT_OWN_NFT_SERIAL_NO, isRequestFromOwner);
+            }
+        }
+
         if (isRequestFromOwner) {
             return (HederaResponseCodes.SUCCESS, true);
         }
@@ -714,20 +729,25 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
 
         /// @dev the key can be retrieved using either of the following method
         // method 1: gas inefficient
-        // uint256 length = _fungibleTokenInfos[token].tokenInfo.token.tokenKeys.length;
-        // for (uint256 i = 0; i < length; i++) {
-        //     IHederaTokenService.TokenKey memory tokenKey = _fungibleTokenInfos[token].tokenInfo.token.tokenKeys[i];
-        //     if (tokenKey.keyType == keyType) {
-        //         key = tokenKey.key;
-        //         break;
-        //     }
-        // }
+        // key = _getTokenKey(_fungibleTokenInfos[token].tokenInfo.token.tokenKeys, keyType);
 
         // method 2: more gas efficient and works for BOTH token types; however currently only considers contractId
         address keyValue = _tokenKeys[token][keyType];
         key.contractId = keyValue;
 
         return (HederaResponseCodes.SUCCESS, key);
+    }
+
+    function _getTokenKey(IHederaTokenService.TokenKey[] memory tokenKeys, uint keyType) internal view returns (KeyValue memory key) {
+        uint256 length = tokenKeys.length;
+
+        for (uint256 i = 0; i < length; i++) {
+            IHederaTokenService.TokenKey memory tokenKey = tokenKeys[i];
+            if (tokenKey.keyType == keyType) {
+                key = tokenKey.key;
+                break;
+            }
+        }
     }
 
     function getTokenType(address token) external view returns (int64 responseCode, int32 tokenType) {
