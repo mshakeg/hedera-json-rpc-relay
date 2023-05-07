@@ -278,6 +278,29 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
             return HederaResponseCodes.INVALID_TOKEN_INITIAL_SUPPLY;
         }
 
+        uint256 tokenNameLength = _getStringLength(token.name);
+        uint256 tokenSymbolLength = _getStringLength(token.symbol);
+
+        if (tokenNameLength == 0) {
+            return HederaResponseCodes.MISSING_TOKEN_NAME;
+        }
+
+        // TODO: investigate correctness of max length conditionals
+        // solidity strings use UTF-8 encoding, Hedera restricts the name and symbol to 100 bytes
+        // in ASCII that is 100 characters
+        // however in UTF-8 it is 100/4 = 25 UT-8 characters
+        if (tokenNameLength > 100) {
+            return HederaResponseCodes.TOKEN_NAME_TOO_LONG;
+        }
+
+        if (tokenSymbolLength == 0) {
+            return HederaResponseCodes.MISSING_TOKEN_SYMBOL;
+        }
+
+        if (tokenSymbolLength > 100) {
+            return HederaResponseCodes.TOKEN_SYMBOL_TOO_LONG;
+        }
+
         return HederaResponseCodes.SUCCESS;
     }
 
@@ -684,7 +707,6 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
         return (HederaResponseCodes.SUCCESS, tokenInfo);
     }
 
-    /// TODO: investigate difference between the following function and function getKey(address token, KeyHelper.KeyType keyType) public view
     function getTokenKey(address token, uint keyType) external view returns (int64 responseCode, KeyValue memory key) {
         if (!_isToken(token)) {
             return (HederaResponseCodes.INVALID_TOKEN_ID, key);
@@ -820,10 +842,20 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
     }
 
     // Additional(not in IHederaTokenService) public/external view functions:
+    /// @dev KeyHelper.KeyType is an enum; whereas KeyHelper.keyTypes is a mapping that maps the enum index to a uint256
+    /// keyTypes[KeyType.ADMIN] = 1;
+    /// keyTypes[KeyType.KYC] = 2;
+    /// keyTypes[KeyType.FREEZE] = 4;
+    /// keyTypes[KeyType.WIPE] = 8;
+    /// keyTypes[KeyType.SUPPLY] = 16;
+    /// keyTypes[KeyType.FEE] = 32;
+    /// keyTypes[KeyType.PAUSE] = 64;
+    /// i.e. the relation is 2^(uint(KeyHelper.KeyType)) = keyType
     function getKey(address token, KeyHelper.KeyType keyType) public view returns (address keyOwner) {
-        /// @dev for some reason getKeyType does not return the correct uint value; e.g. keyType = SUPPLY(i.e. 4) should return 16, but instead returns the enum value i.e. 4
-        ///      hence 2 ** keyType is used instead
+        /// @dev the following relation is used due to the below described issue with KeyHelper.getKeyType
         uint _keyType = 2 ** uint(keyType);
+        /// @dev the following does not work since the KeyHelper has all of its storage/state cleared/defaulted once vm.etch is used
+        ///      to fix this KeyHelper should expose a function that does what it's constructor does i.e. initialise the keyTypes mapping
         // uint _keyType = getKeyType(keyType);
         keyOwner = _tokenKeys[token][_keyType];
     }
@@ -1332,5 +1364,9 @@ contract HtsPrecompileMock is NoDelegateCall, IHederaTokenService, KeyHelper {
 
     function getTreasuryAccount(address token) external view returns (address treasury) {
         return _getTreasuryAccount(token);
+    }
+
+    function _getStringLength(string memory _string) internal pure returns (uint length) {
+        length = bytes(_string).length;
     }
 }
