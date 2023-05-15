@@ -96,16 +96,40 @@ describe('LowLevelCall', function() {
   it('should confirm valid contract', async function() {
 
     const result = await caller.isContract(lowLevelReceiver.address);
-
-    console.log(result);
+    expect(result).to.be.eq(true);
 
   });
 
   it('should confirm invalid contract', async function() {
 
     const result = await caller.isContract(invalidLowLevelReceiverAddress);
+    expect(result).to.be.eq(false);
 
-    console.log(result);
+  });
+
+  it('should confirm valid contract via tx', async function() {
+
+    const tx = await caller.isContractTx(lowLevelReceiver.address);
+
+    const rc = await tx.wait();
+
+    const responseEvent = rc.events?.find((event) => event.event === "Response");
+
+    expect(responseEvent).to.not.be.eq(undefined);
+    expect(responseEvent?.args!.success).to.be.eq(true);
+
+  });
+
+  it('should confirm invalid contract via tx', async function() {
+
+    const tx = await caller.isContractTx(invalidLowLevelReceiverAddress);
+
+    const rc = await tx.wait();
+
+    const responseEvent = rc.events?.find((event) => event.event === "Response");
+
+    expect(responseEvent).to.not.be.eq(undefined);
+    expect(responseEvent?.args!.success).to.be.eq(false);
 
   });
 

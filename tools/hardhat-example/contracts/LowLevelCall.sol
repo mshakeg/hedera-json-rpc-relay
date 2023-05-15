@@ -65,4 +65,10 @@ contract Caller {
         return account.code.length > 0;
     }
 
+    function isContractTx(address account) public returns (bool doesExist) {
+        doesExist = account.code.length > 0;
+        bytes memory data = "";
+        emit Response(doesExist, data);
+    }
+
 }
