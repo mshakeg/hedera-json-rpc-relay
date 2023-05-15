@@ -74,6 +74,8 @@
     "test:dc": "npx hardhat test test/delegate-call.test.ts",
     "test:dch:local": "npx hardhat --network h_local test test/delegate-call-hts.test.ts",
     "test:dce": "npx hardhat test test/delegate-call-erc20.test.ts",
+    "test:ss": "npx hardhat test test/simple-storage.test.ts",
+    "test:ss:previewnet": "npx hardhat --network h_previewnet test test/simple-storage.test.ts",
     "hedera-start": "npx @hashgraph/hedera-local start --limits=false --dev=true --turbo=true --balance=10000000",
     "hedera-stop": "npx @hashgraph/hedera-local stop",
     "hardhat-start": "npx hardhat node"
