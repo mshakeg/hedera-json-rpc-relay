@@ -3,5 +3,5 @@ export const deployOverrides = {
 };
 
 export const defaultOverrides = {
-  gasLimit: 2_000_000
+  gasLimit: 2_500_000
 };
