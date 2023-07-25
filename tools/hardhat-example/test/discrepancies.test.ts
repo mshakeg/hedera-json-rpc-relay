@@ -2,7 +2,7 @@ import { TransactionReceipt } from '@ethersproject/providers';
 import { expect } from 'chai';
 import { BigNumber, ContractReceipt } from 'ethers';
 import {ethers, network} from 'hardhat';
-import { SillyLargeContract, SillyLargeContract__factory, SimpleVault__factory, SimpleVault, Associator, HERC20Util, HERC20Util__factory, ERC20__factory } from '../types';
+import { IHRC__factory, SillyLargeContract, SillyLargeContract__factory, SimpleVault__factory, SimpleVault, Associator, HERC20Util, HERC20Util__factory, ERC20__factory } from '../types';
 import { transferToken } from './api/core';
 import { balanceOf } from './api/core/balances';
 import { defaultOverrides, getBigNumber, getRandomNumber } from './utils';
@@ -122,6 +122,9 @@ describe('Demo discrepancies between hardhat and hedera local node', function() 
 
   it('should be able to deposit and withdraw from vault repeatedly and get correct balances', async function () {
 
+    const accounts = await ethers.getSigners();
+    const defaultTokenOwner = accounts[0];
+
     if (network.name === Networks.hardhat_local) {
       // hedera precompile contracts aren't functional on the hardhat local node
       this.skip();
@@ -157,18 +160,19 @@ describe('Demo discrepancies between hardhat and hedera local node', function() 
     expect(isAassociatedWithTokenB).to.be.eq(true, "SimpleVault is not associated with tokenB");
 
     async function associateToken(tokenAddress: string) {
-      const assTx = await associatorContract.associateSender(tokenAddress, defaultOverrides);
+      const hrcContract = IHRC__factory.connect(tokenAddress, defaultTokenOwner);
+      const assTx = await hrcContract.associate(defaultOverrides);
       assTx.wait();
     }
 
     await associateToken(tokenA.address);
     await associateToken(tokenB.address);
 
-    const accounts = await ethers.getSigners();
-    const defaultTokenOwner = accounts[0];
-
     await transferToken(defaultTokenOwner.address, tokenA.address, totalSupply.toNumber());
     await transferToken(defaultTokenOwner.address, tokenB.address, totalSupply.toNumber());
+
+    await erc20TokenA.approve(simpleVaultContract.address, totalSupply)
+    await erc20TokenB.approve(simpleVaultContract.address, totalSupply)
 
     const HERC20UtilFactory: HERC20Util__factory = await ethers.getContractFactory("HERC20Util");
     const hERC20UtilContract: HERC20Util = (await HERC20UtilFactory.deploy({ gasLimit: 5_000_000 })) as HERC20Util;

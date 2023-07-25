@@ -6,7 +6,7 @@
   "devDependencies": {
     "@ethersproject/logger": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
-    "@hashgraph/hedera-local": "^2.6.0",
+    "@hashgraph/hedera-local": "^2.11.1",
     "@hashgraph/hethers": "^1.1.2",
     "@hashgraph/sdk": "^2.22.0",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.6",
@@ -77,7 +77,7 @@
     "test:ss": "npx hardhat test test/simple-storage.test.ts",
     "test:ss:previewnet": "npx hardhat --network h_previewnet test test/simple-storage.test.ts",
     "test:tf:testnet": "npx hardhat --network h_testnet test test/token-facade.test.ts",
-    "hedera-start": "npx @hashgraph/hedera-local start --limits=false --dev=true --turbo=true --balance=10000000",
+    "hedera-start": "npx @hashgraph/hedera-local start --limits=false --dev=true --balance=10000000",
     "hedera-stop": "npx @hashgraph/hedera-local stop",
     "hardhat-start": "npx hardhat node"
   }
